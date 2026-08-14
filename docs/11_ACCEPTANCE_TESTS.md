@@ -1,0 +1,56 @@
+# Orientation – Acceptance Tests
+
+**Status:** Bootstrap acceptance baseline
+
+## Architecture invariants
+
+1. Orientation domain code can compile/test without Spring, MapLibre, Valhalla or foreign domain packages.
+2. No Orientation code directly reads/writes a Vocation, Illumination, WGT or Conveyance database.
+3. Map surface public types contain no Vocation-specific domain names.
+4. Map surface public contract types contain no MapLibre implementation objects.
+5. Routing provider implementation does not leak Valhalla response types across the application boundary.
+6. Current location is not persisted by default.
+7. Host interaction rather than core renderer code owns product navigation/external-resource execution.
+
+## Bootstrap checks
+
+- Java backend builds on Java 25.
+- Spring application context test passes.
+- TypeScript strict typecheck passes.
+- Map reference host builds.
+- Map model tests pass.
+- CI runs backend and map checks independently.
+- `git diff --check` is clean.
+
+## First renderer proof
+
+Given three generic Spatial Features:
+
+- map initializes successfully;
+- all features can be represented;
+- selecting a feature emits its opaque feature ref;
+- rich resources/actions can be presented without provider-specific code;
+- the map can be destroyed/recreated without leaking state.
+
+## Future integration gates
+
+### Vocation
+
+- Vocation can consume Orientation geocoding without transferring Work Location/Precision authority.
+- rich Vocation spatial projection supports required external resources.
+- Vocation reference map no longer needs its own generic Leaflet implementation after migration.
+
+### WGT Windows
+
+- WGT can host the Orientation map surface;
+- selection/resource/action events reach the WGT presentation adapter;
+- WGT shell/navigation remains WGT-owned.
+
+### WGT iPhone
+
+- same renderer capability works on a physical iPhone host;
+- touch/pan/zoom/selection are usable;
+- lifecycle/reload behavior is correct;
+- current-position input works when host permission is granted.
+
+Legacy renderer deletion occurs only after the relevant gates pass.

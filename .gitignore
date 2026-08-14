@@ -1,0 +1,30 @@
+# Java / Maven
+backend/target/
+backend/.classpath
+backend/.project
+backend/.settings/
+
+# Node / TypeScript
+map/node_modules/
+map/dist/
+map/.vite/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local/runtime
+.env
+.env.*
+!.env.example
+*.log
+
+# Bootstrap archive must never be committed
+*.zip

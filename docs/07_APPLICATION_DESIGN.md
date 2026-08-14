@@ -1,0 +1,94 @@
+# Orientation – Application Design
+
+**Status:** Bootstrap baseline
+
+## Backend dependency direction
+
+```text
+domain
+  ^
+  |
+application
+  ^
+  |
+adapters / infrastructure
+  ^
+  |
+host / HTTP
+```
+
+Domain code is framework-independent.
+
+Application services express use cases and define ports for:
+
+- geocoding;
+- reverse geocoding;
+- place search;
+- routing;
+- technical cache/index providers where later justified.
+
+Provider adapters implement those ports.
+
+## Map surface
+
+The TypeScript map surface is a separate runtime artifact inside the same bounded context.
+
+Conceptual boundary:
+
+```text
+SpatialScene in
+    |
+    v
+Orientation Map Surface
+    |
+    +--> rendered map
+    |
+    +--> generic interaction events out
+```
+
+The public surface must not expose MapLibre classes as contract types.
+
+Initial generic events may include:
+
+- feature selected;
+- spatial resource activated;
+- spatial action activated;
+- viewport changed;
+- map error/ready.
+
+Exact event schemas must be introduced with tests when used.
+
+## Rich information
+
+Orientation may render generic information/resource/action structures because exploration is part of its geospatial capability.
+
+The source of those structures retains semantic authority.
+
+For example, Vocation can say "this resource is the preferred job posting." Orientation can render a button/entry, but it does not decide which posting is preferred.
+
+## External-resource execution
+
+Prefer emitting activation events to the host rather than unconditionally navigating from core renderer code.
+
+This supports:
+
+- WGT-controlled platform navigation;
+- browser reference-host navigation;
+- URL policy/security enforcement;
+- testability.
+
+## Current location
+
+Platform/browser permission and acquisition are host concerns.
+
+The host supplies PositionFix data to Orientation. Orientation owns generic validation/use/visualization of the supplied fix.
+
+## Failure model
+
+Provider unavailability, invalid provider payloads, rate limiting and timeout are explicit application outcomes.
+
+Do not convert them into foreign-domain states such as "job unavailable."
+
+## No speculative persistence
+
+The first backend slice must remain stateless except for bounded technical runtime state. Introduce a database only with a concrete stateful capability.

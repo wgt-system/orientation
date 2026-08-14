@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Orientation Reference Host</title>
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="panel">
+        <p class="eyebrow">WGT SYSTEM · ORIENTATION</p>
+        <h1>Discover. Explore. Navigate.</h1>
+        <p>
+          Reference/development host for the generic Orientation map surface.
+          Domain semantics belong to the supplying bounded context.
+        </p>
+        <div id="selection" class="selection" aria-live="polite">
+          Select a spatial feature on the map.
+        </div>
+      </aside>
+      <section id="map" class="map" aria-label="Orientation reference map"></section>
+    </main>
+    <script type="module" src="/src/reference/main.ts"></script>
+  </body>
+</html>

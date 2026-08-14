@@ -1,0 +1,16 @@
+name: Architecture decision
+description: Orientation-local architecture decision requiring an ADR
+title: ""
+labels: []
+body:
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision required
+    validations:
+      required: true
+  - type: textarea
+    id: system_boundary
+    attributes:
+      label: System-boundary impact
+      description: If this changes cross-context ownership, route it to wgt-system/architecture.
