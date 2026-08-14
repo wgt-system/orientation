@@ -27,7 +27,7 @@ Do not independently implement a generic capability already owned by another acc
 
 Generic durable opaque cross-device delivery is owned by **Conveyance**.
 
-Generic geospatial/map/geocoding/routing capability is owned by **Orientation** once the corresponding system architecture decision is present in `wgt-system/architecture`.
+Generic geospatial/map/geocoding/routing capability is owned by **Orientation**, as accepted by the System Architecture Control Plane in [ADR-0003](https://github.com/wgt-system/architecture/blob/dev/adr/0003-orientation-geospatial-capability-ownership.md).
 
 This does not transfer provider-domain semantics to Orientation. Vocation continues to own Work Location, Opportunity, Company, Posting, External Link and other job-market meaning. WGT continues to own device/platform product integration and presentation.
 

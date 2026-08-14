@@ -1,18 +1,22 @@
 # Orientation – Repository Alignment
 
-**Status:** Initial known alignment findings
+**Status:** Initial architecture alignment completed; remaining findings are future owning-repository work
 
 This file records cross-repository work that must be executed in the owning repository/control plane. Orientation workers must not opportunistically edit foreign repositories unless the user explicitly authorizes that cross-project scope.
 
 ## wgt-system/architecture
 
-Required immediately after/with Orientation bootstrap:
+Completed in `wgt-system/architecture` commit
+`db754123ef632d4f6929afe0f62e9a588ae60a47`, system ADR-0003:
 
 - add Orientation as accepted fifth bounded context;
 - assign generic geospatial/map/geocoding/routing capability ownership;
 - remove Shared Map from unresolved/hypothetical capability status;
 - system ADR for Orientation ownership and cross-context interaction;
 - update Service Catalog, Capability Catalog, System Context, Integration Policy, Architecture Principles, README, agent template and derived Structurizr model.
+
+The Architecture Control Plane now records Orientation as the accepted fifth bounded context
+and generic geospatial owner. The findings below remain future work in their owning repositories.
 
 ## wgt-system/vocation
 

@@ -1,6 +1,6 @@
 # Orientation – Repository Bootstrap Specification
 
-**Status:** Active bootstrap specification
+**Status:** Completed historical bootstrap record
 
 ## Repository
 
@@ -87,9 +87,9 @@ The reference host is not the WGT product UI.
 
 CI runs backend and map jobs independently.
 
-## GitHub bootstrap
+## Historical GitHub bootstrap
 
-The initial worker must:
+The initial worker performed the following steps:
 
 1. unpack the bootstrap ZIP into `P:\wgt-system\orientation`;
 2. read `.bootstrap/LUNA_BOOTSTRAP.md` and all repository docs;
@@ -107,9 +107,9 @@ The initial worker must:
 
 Do not create Issues/Milestones in this bootstrap run. They are created after the pushed repository is reviewed.
 
-## Completion gate
+## Completion result
 
-Bootstrap is complete when:
+The bootstrap completed with:
 
 - remote `wgt-system/orientation` exists and is readable;
 - `main` and `dev` exist remotely;

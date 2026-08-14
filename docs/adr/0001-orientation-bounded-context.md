@@ -1,6 +1,6 @@
 # ADR-0001: Orientation is the geospatial bounded context
 
-- **Status:** Accepted locally; system-level acceptance must be mirrored in `wgt-system/architecture`
+- **Status:** Accepted
 - **Date:** 2026-08-14
 
 ## Context
@@ -12,6 +12,8 @@ These capabilities form a coherent spatial language and have legitimate consumer
 ## Decision
 
 Create Orientation as the bounded context for generic geospatial capability.
+
+The system-level ownership decision is mirrored by `wgt-system/architecture` ADR-0003.
 
 Orientation is organized around Discover, Explore and Navigate, with Current Location as a supporting geospatial capability.
 
