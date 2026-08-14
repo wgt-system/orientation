@@ -1,23 +1,49 @@
 # Orientation – Implementation Plan
 
-**Status:** Initial control-plane plan
+**Status:** Control-plane plan; repository bootstrap completed
 
 Milestone names, when created, use semantic versions only.
 
-## v0.1.0 — Orientation foundation
+## v0.1.0 — Orientation map-surface foundation
 
-Goal: establish the bounded context and prove the reusable map-surface architecture.
+Goal: deliver the first reusable Orientation map-surface capability: a stable
+provider-neutral Spatial Scene boundary, rich spatial feature interaction,
+host-supplied current-location presentation, and an embeddable host bridge
+suited to WGT browser/WebView integration.
 
-Slices:
+The repository bootstrap and CI are complete in the published baseline. v0.1.0
+therefore contains these four concrete work packages:
 
-1. repository bootstrap and CI;
-2. generic scene/feature/resource/action model;
-3. MapLibre renderer lifecycle;
-4. rich marker/reference-host interaction;
-5. host-supplied current-position overlay;
-6. browser/reference-host acceptance;
-7. WGT Windows embedding spike;
-8. physical-iPhone embedding spike.
+1. **Stabilize the Spatial Scene and Map Surface boundary** — evolve the existing
+   SpatialScene/SpatialFeature seed with deterministic scene updates, identity and
+   validation, viewport intent/fit behavior, renderer lifecycle/error/ready
+   semantics, opaque selection events, and clean destroy/recreate behavior.
+2. **Implement rich spatial feature interaction** — add generic information,
+   SpatialResource and SpatialAction presentation, host-mediated activation events,
+   safe URI/text handling, accessibility, and coherent reference-host details.
+   Rich external resources are explicitly allowed; no URL-free restriction applies.
+3. **Add host-supplied current-location presentation** — accept PositionFix with
+   coordinate, accuracy and observed-at data, render/update/remove the location and
+   accuracy independently of provider features, and keep permission/history outside
+   Orientation core.
+4. **Provide the embeddable Orientation host bridge and harden v0.1.0** — define
+   the narrow versioned scene-in/event-out bridge required for WGT WebView hosting,
+   validate inbound messages, cover lifecycle/reload, package the provider-neutral
+   artifact, and complete browser/performance/regression/readiness checks.
+
+Dependency order:
+
+```text
+Issue 1
+├── Issue 2
+├── Issue 3
+└── Issue 4 (after Issues 1, 2 and 3)
+```
+
+v0.1.0 does not add routing, Valhalla, place discovery, geocoding migration,
+Vocation contract migration, or foreign-domain semantics. It does not introduce
+persistence, a broad network API, React/Avalonia/Vocation dependencies, or a new
+generic map microservice.
 
 Do not delete legacy Vocation/WGT renderers before replacement gates pass.
 
