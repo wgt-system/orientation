@@ -42,6 +42,13 @@ Spring is host/infrastructure, not domain.
 - framework-independent reusable core
 - standalone browser reference host for development/debug
 
+The map package produces two browser artifacts: the rich Reference Host
+(`index.html`) and the provider-neutral Embed Host (`embed.html`). The Embed
+Host exposes only the documented Orientation Host Bridge entry point and does
+not include reference/demo controls or provider data. Bridge protocol parsing
+and validation are separate from the browser event transport; WebView2,
+WKWebView and Avalonia/WGT adapters remain outside this repository.
+
 Do not depend on React in the reusable renderer core.
 
 ### Routing

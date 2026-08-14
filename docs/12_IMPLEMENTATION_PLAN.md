@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; repository bootstrap completed
+**Status:** Control-plane plan; four v0.1.0 implementation packages completed in the repository. Milestone/release approval remains pending.
 
 Milestone names, when created, use semantic versions only.
 
@@ -30,6 +30,9 @@ therefore contains these four concrete work packages:
    the narrow versioned scene-in/event-out bridge required for WGT WebView hosting,
    validate inbound messages, cover lifecycle/reload, package the provider-neutral
    artifact, and complete browser/performance/regression/readiness checks.
+
+Issues #1, #2, #3 and #4 now have implementation and CI evidence on `dev`.
+This does not mark milestone `v0.1.0` released or approved.
 
 Dependency order:
 

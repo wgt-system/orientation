@@ -24,6 +24,10 @@ describe("PositionFix", () => {
     expect(() => validatePositionFix({ ...position, accuracyMeters: Number.POSITIVE_INFINITY })).toThrow(/accuracy/);
     expect(() => validatePositionFix({ ...position, observedAt: "not-a-timestamp" })).toThrow(/observed-at/);
     expect(() => validatePositionFix({ ...position, observedAt: "2026-08-14T12:00:00Z" })).toThrow(/observed-at/);
+    expect(() => validatePositionFix({ ...position, observedAt: "2026-02-31T12:00:00.000Z" })).toThrow(/observed-at/);
+    expect(() => validatePositionFix({ ...position, observedAt: "2025-02-29T12:00:00.000Z" })).toThrow(/observed-at/);
+    expect(() => validatePositionFix({ ...position, observedAt: "2024-02-29T12:00:00.000Z" })).not.toThrow();
+    expect(() => validatePositionFix({ ...position, observedAt: "2026-13-01T12:00:00.000Z" })).toThrow(/observed-at/);
   });
 
   it("deeply snapshots caller-owned position values", () => {
@@ -61,9 +65,22 @@ describe("createAccuracyGeometry", () => {
 
     expect(geometry.geometry.type).toBe("Polygon");
     expect(ring).toHaveLength(65);
-    expect(ring[0]![1]).toBe(position.coordinate.latitude);
-    expect(ring[0]![0]).toBeGreaterThan(position.coordinate.longitude);
-    expect(ring[16]![1]).toBeGreaterThan(position.coordinate.latitude);
-    expect(ring[0]![0] - position.coordinate.longitude).toBeCloseTo(100 / (111_320 * Math.cos((50 * Math.PI) / 180)), 8);
+    expect(ring[0]![0]).toBeCloseTo(position.coordinate.longitude, 8);
+    expect(ring[0]![1]).toBeGreaterThan(position.coordinate.latitude);
+    expect(ring[16]![0]).toBeGreaterThan(position.coordinate.longitude);
+  });
+
+  it("keeps polar, antimeridian and large-accuracy coordinates valid", () => {
+    for (const sample of [
+      { ...position, coordinate: { longitude: 179.9, latitude: 80 }, accuracyMeters: 50_000 },
+      { ...position, coordinate: { longitude: -179.9, latitude: 89.9 }, accuracyMeters: 500_000 },
+      { ...position, coordinate: { longitude: 0, latitude: 0 }, accuracyMeters: 0 },
+      { ...position, coordinate: { longitude: 0, latitude: 0 }, accuracyMeters: 20_000_000 },
+    ]) {
+      const ring = createAccuracyGeometry(sample).geometry.coordinates[0]!;
+      expect(ring.every(([longitude, latitude]) =>
+        longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90,
+      )).toBe(true);
+    }
   });
 });

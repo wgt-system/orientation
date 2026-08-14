@@ -74,6 +74,14 @@ Controls:
 - no arbitrary JavaScript evaluation as a domain command channel;
 - Content Security Policy for reference/embedded host where practical.
 
+The accepted Host Bridge 1.0 boundary treats inbound JSON as untrusted: it
+checks contract/version/type, closed payload structure, finite coordinates and
+numbers, existing scene/resource/PositionFix rules, safe URI schemes and
+canonical timestamps before invoking renderer state. Dispatch uses an explicit
+message-type switch; it does not use prototype lookup, eval, Function
+constructors, arbitrary navigation or fetch. Bridge errors expose stable safe
+codes/messages without raw payloads or stacks.
+
 ### Tile/style supply chain
 
 Controls:

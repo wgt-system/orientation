@@ -175,4 +175,21 @@ describe("resolveViewport", () => {
     });
     expect(resolveViewport({ features: [], viewport: { kind: "preserve" } })).toEqual({ kind: "preserve" });
   });
+
+  it("fits the minimal longitude span across the antimeridian", () => {
+    expect(resolveViewport({
+      features: [
+        { ref: "east", sourceRef: "provider", coordinate: { longitude: 179, latitude: 10 }, title: "East" },
+        { ref: "west", sourceRef: "provider", coordinate: { longitude: -179, latitude: 11 }, title: "West" },
+      ],
+    })).toEqual({
+      kind: "fit",
+      bounds: {
+        southWest: { longitude: 179, latitude: 10 },
+        northEast: { longitude: 181, latitude: 11 },
+      },
+      padding: 48,
+      maxZoom: 14,
+    });
+  });
 });

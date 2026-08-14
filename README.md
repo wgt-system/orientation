@@ -56,6 +56,9 @@ Valhalla is treated as an upstream C++ routing engine behind an Orientation adap
 
 ## Status
 
-Repository bootstrap baseline. Exact public contracts are intentionally not frozen merely to reserve future integration. Concrete slices must justify them first.
+v0.1.0 map-surface implementation packages are present on `dev`: provider-neutral
+scene boundary, rich interaction, host-supplied current location and the narrow
+`orientation.host-bridge` 1.0 Embed Host artifact. This is not a release approval;
+WGT Windows/iPhone integration and Vocation migration remain future gates.
 
 See [`docs/INDEX.md`](docs/INDEX.md).

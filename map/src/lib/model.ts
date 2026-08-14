@@ -228,22 +228,44 @@ export function resolveViewport(scene: SpatialScene): ResolvedViewport {
     };
   }
 
-  const longitudes = scene.features.map((feature) => feature.coordinate.longitude);
   const latitudes = scene.features.map((feature) => feature.coordinate.latitude);
+  const longitudes = scene.features.map((feature) => feature.coordinate.longitude);
+  const longitudeBounds = resolveMinimalLongitudeSpan(longitudes);
 
   return {
     kind: "fit",
     bounds: {
       southWest: {
-        longitude: Math.min(...longitudes),
+        longitude: longitudeBounds.start,
         latitude: Math.min(...latitudes),
       },
       northEast: {
-        longitude: Math.max(...longitudes),
+        longitude: longitudeBounds.end,
         latitude: Math.max(...latitudes),
       },
     },
     padding: scene.viewport?.padding ?? 48,
     maxZoom: scene.viewport?.maxZoom ?? 14,
   };
+}
+
+function resolveMinimalLongitudeSpan(longitudes: readonly number[]): Readonly<{ start: number; end: number }> {
+  const sorted = [...longitudes].sort((left, right) => left - right);
+  let largestGap = -1;
+  let largestGapIndex = 0;
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const current = sorted[index]!;
+    const next = index === sorted.length - 1 ? sorted[0]! + 360 : sorted[index + 1]!;
+    const gap = next - current;
+    if (gap > largestGap) {
+      largestGap = gap;
+      largestGapIndex = index;
+    }
+  }
+
+  const startIndex = (largestGapIndex + 1) % sorted.length;
+  const start = sorted[startIndex]!;
+  const end = start + (360 - largestGap);
+  return { start, end };
 }

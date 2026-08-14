@@ -1,6 +1,6 @@
 # Orientation – Contracts
 
-**Status:** No public Orientation contract frozen at bootstrap.
+**Status:** `orientation.host-bridge` 1.0 is accepted for the v0.1.0 embedded map renderer. Other Orientation network/application contracts remain unfrozen.
 
 ## Principle
 
@@ -15,6 +15,16 @@ Expected future boundary families include:
 - place discovery API;
 - map-scene / embedded-renderer boundary;
 - host interaction event boundary.
+
+## Accepted host bridge
+
+`orientation.host-bridge` version `1.0` is the first concrete versioned
+renderer-host contract. Its canonical JSON Schema is
+[`contracts/orientation-host-bridge-v1.schema.json`](../contracts/orientation-host-bridge-v1.schema.json).
+It defines a small transport-independent JSON envelope for scene replacement,
+host-supplied current-position updates/clears, generic interaction events,
+map lifecycle status and bridge errors. It is not an HTTP, REST, routing,
+geocoding or backend service contract.
 
 ## Provider-owned spatial data
 

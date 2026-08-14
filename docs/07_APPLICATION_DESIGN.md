@@ -82,6 +82,10 @@ Prefer emitting activation events to the host rather than unconditionally naviga
 
 The reusable surface does not call browser navigation APIs or fetch resource URIs. The reference host demonstrates activation by displaying the received opaque identity.
 
+Automatic multi-feature viewport fitting uses a minimal-span longitude interval;
+its internal resolved bounds may use an unwrapped longitude above 180° across
+the antimeridian, while public Coordinate input remains canonical in `[-180, 180]`.
+
 This supports:
 
 - WGT-controlled platform navigation;

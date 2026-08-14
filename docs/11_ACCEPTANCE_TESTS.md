@@ -1,6 +1,6 @@
 # Orientation – Acceptance Tests
 
-**Status:** Bootstrap baseline plus Issue #1, Issue #2 and Issue #3 map-surface acceptance
+**Status:** Bootstrap baseline plus Issues #1–#4 map-surface acceptance evidence; v0.1.0 release approval remains a control-plane decision.
 
 ## Architecture invariants
 
@@ -44,6 +44,11 @@ resource/action execution.
 Issue #3 additionally requires host-supplied immutable PositionFix validation, independent
 set/update/clear behavior, geographic accuracy visualization, no automatic viewport following,
 no retained location history, and deterministic cleanup across renderer lifecycle transitions.
+
+Issue #4 acceptance evidence includes the validated `orientation.host-bridge` 1.0
+JSON envelope/schema, independently testable protocol core, deterministic bridge/map
+lifecycle, separate Embed Host artifact, malformed-message rejection, timestamp/
+accuracy/antimeridian hardening, 500-feature sanity fixture, and Reference/Embed browser smoke.
 
 ## Future integration gates
 

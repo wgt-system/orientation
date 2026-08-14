@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wgt-system/orientation/blob/dev/contracts/orientation-host-bridge-v1.schema.json",
+  "title": "Orientation Host Bridge 1.0",
+  "oneOf": [
+    { "$ref": "#/$defs/sceneReplace" },
+    { "$ref": "#/$defs/currentPositionSet" },
+    { "$ref": "#/$defs/currentPositionClear" },
+    { "$ref": "#/$defs/bridgeReady" },
+    { "$ref": "#/$defs/mapStatus" },
+    { "$ref": "#/$defs/featureSelected" },
+    { "$ref": "#/$defs/resourceActivated" },
+    { "$ref": "#/$defs/actionActivated" },
+    { "$ref": "#/$defs/bridgeError" }
+  ],
+  "$defs": {
+    "envelope": {
+      "type": "object",
+      "required": ["contract", "version", "type", "payload"],
+      "properties": {
+        "contract": { "const": "orientation.host-bridge" },
+        "version": { "const": "1.0" },
+        "type": { "type": "string" },
+        "payload": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "coordinate": {
+      "type": "object",
+      "required": ["longitude", "latitude"],
+      "properties": {
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 }
+      },
+      "additionalProperties": false
+    },
+    "resource": {
+      "type": "object",
+      "required": ["ref", "label"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "label": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "uri": { "type": "string", "pattern": "^https?://", "format": "uri" }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": ["ref", "label"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "label": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }
+      },
+      "additionalProperties": false
+    },
+    "informationRow": {
+      "type": "object",
+      "required": ["label", "value"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "value": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }
+      },
+      "additionalProperties": false
+    },
+    "informationSection": {
+      "type": "object",
+      "required": ["rows"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "rows": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/informationRow" } }
+      },
+      "additionalProperties": false
+    },
+    "feature": {
+      "type": "object",
+      "required": ["ref", "sourceRef", "coordinate", "title"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "sourceRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "coordinate": { "$ref": "#/$defs/coordinate" },
+        "title": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "subtitle": { "type": "string" },
+        "information": { "type": "array", "items": { "$ref": "#/$defs/informationSection" } },
+        "resources": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/action" } }
+      },
+      "additionalProperties": false
+    },
+    "scene": {
+      "type": "object",
+      "required": ["features"],
+      "properties": {
+        "features": { "type": "array", "items": { "$ref": "#/$defs/feature" } },
+        "viewport": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["automatic", "preserve"] },
+            "padding": { "type": "number", "minimum": 0 },
+            "maxZoom": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "positionFix": {
+      "type": "object",
+      "required": ["coordinate", "accuracyMeters", "observedAt"],
+      "properties": {
+        "coordinate": { "$ref": "#/$defs/coordinate" },
+        "accuracyMeters": { "type": "number", "minimum": 0 },
+        "observedAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" }
+      },
+      "additionalProperties": false
+    },
+    "sceneReplace": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "properties": { "type": { "const": "scene.replace" }, "payload": { "$ref": "#/$defs/scene" } } }
+      ]
+    },
+    "currentPositionSet": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "properties": { "type": { "const": "current-position.set" }, "payload": { "$ref": "#/$defs/positionFix" } } }
+      ]
+    },
+    "currentPositionClear": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "properties": { "type": { "const": "current-position.clear" }, "payload": { "type": "object", "additionalProperties": false } } }
+      ]
+    },
+    "bridgeReady": { "allOf": [ { "$ref": "#/$defs/envelope" }, { "properties": { "type": { "const": "bridge.ready" }, "payload": { "type": "object", "additionalProperties": false } } } ] },
+    "mapStatus": { "allOf": [ { "$ref": "#/$defs/envelope" }, { "properties": { "type": { "const": "map.status" }, "payload": { "type": "object", "required": ["status"], "properties": { "status": { "enum": ["initializing", "ready", "error", "destroyed"] } }, "additionalProperties": false } } } ] },
+    "featureSelected": { "allOf": [ { "$ref": "#/$defs/envelope" }, { "properties": { "type": { "const": "feature.selected" }, "payload": { "$ref": "#/$defs/featureIdentity" } } } ] },
+    "resourceActivated": { "allOf": [ { "$ref": "#/$defs/envelope" }, { "properties": { "type": { "const": "resource.activated" }, "payload": { "$ref": "#/$defs/resourceIdentity" } } } ] },
+    "actionActivated": { "allOf": [ { "$ref": "#/$defs/envelope" }, { "properties": { "type": { "const": "action.activated" }, "payload": { "$ref": "#/$defs/actionIdentity" } } } ] },
+    "featureIdentity": { "type": "object", "required": ["featureRef", "sourceRef"], "properties": { "featureRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }, "sourceRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" } }, "additionalProperties": false },
+    "resourceIdentity": { "type": "object", "required": ["featureRef", "sourceRef", "resourceRef"], "properties": { "featureRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }, "sourceRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }, "resourceRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" } }, "additionalProperties": false },
+    "actionIdentity": { "type": "object", "required": ["featureRef", "sourceRef", "actionRef"], "properties": { "featureRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }, "sourceRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }, "actionRef": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" } }, "additionalProperties": false },
+    "bridgeError": { "allOf": [ { "$ref": "#/$defs/envelope" }, { "properties": { "type": { "const": "bridge.error" }, "payload": { "type": "object", "required": ["code", "message"], "properties": { "code": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" }, "message": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" } }, "additionalProperties": false } } } ] }
+  }
+}

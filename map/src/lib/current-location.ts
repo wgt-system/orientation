@@ -8,8 +8,8 @@ export type PositionFix = Readonly<{
 
 const ISO_TIMESTAMP =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-const METERS_PER_LATITUDE_DEGREE = 111_320;
 const ACCURACY_SEGMENTS = 64;
+const EARTH_RADIUS_METERS = 6_371_008.8;
 
 export function validatePositionFix(position: PositionFix): void {
   if (!position || typeof position !== "object" || !isCoordinate(position.coordinate)) {
@@ -20,8 +20,7 @@ export function validatePositionFix(position: PositionFix): void {
   }
   if (
     typeof position.observedAt !== "string" ||
-    !ISO_TIMESTAMP.test(position.observedAt) ||
-    !Number.isFinite(Date.parse(position.observedAt))
+    !isCanonicalTimestamp(position.observedAt)
   ) {
     throw new Error("Position fix observed-at must be a valid UTC ISO timestamp.");
   }
@@ -64,16 +63,25 @@ export type AccuracyGeometry = Readonly<{
 export function createAccuracyGeometry(position: PositionFix): AccuracyGeometry {
   const snapshot = snapshotPositionFix(position);
   const { longitude, latitude } = snapshot.coordinate;
-  const latitudeRadius = snapshot.accuracyMeters / METERS_PER_LATITUDE_DEGREE;
-  const longitudeScale = Math.max(Math.cos((latitude * Math.PI) / 180), 0.01);
-  const longitudeRadius = snapshot.accuracyMeters / (METERS_PER_LATITUDE_DEGREE * longitudeScale);
   const coordinates: [number, number][] = [];
+  const angularDistance = Math.min(snapshot.accuracyMeters / EARTH_RADIUS_METERS, Math.PI);
+  const latitudeRadians = (latitude * Math.PI) / 180;
 
   for (let index = 0; index <= ACCURACY_SEGMENTS; index += 1) {
     const angle = (index / ACCURACY_SEGMENTS) * Math.PI * 2;
+    const destinationLatitude = Math.asin(
+      Math.sin(latitudeRadians) * Math.cos(angularDistance) +
+        Math.cos(latitudeRadians) * Math.sin(angularDistance) * Math.cos(angle),
+    );
+    const destinationLongitude =
+      (longitude * Math.PI) / 180 +
+      Math.atan2(
+        Math.sin(angle) * Math.sin(angularDistance) * Math.cos(latitudeRadians),
+        Math.cos(angularDistance) - Math.sin(latitudeRadians) * Math.sin(destinationLatitude),
+      );
     coordinates.push([
-      normalizeLongitude(longitude + Math.cos(angle) * longitudeRadius),
-      latitude + Math.sin(angle) * latitudeRadius,
+      normalizeLongitude((destinationLongitude * 180) / Math.PI),
+      Math.max(-90, Math.min(90, (destinationLatitude * 180) / Math.PI)),
     ]);
   }
 
@@ -84,6 +92,14 @@ export function createAccuracyGeometry(position: PositionFix): AccuracyGeometry 
       coordinates: Object.freeze([Object.freeze(coordinates)]),
     }),
   });
+}
+
+function isCanonicalTimestamp(timestamp: string): boolean {
+  if (!ISO_TIMESTAMP.test(timestamp)) {
+    return false;
+  }
+  const parsed = Date.parse(timestamp);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === timestamp;
 }
 
 function normalizeLongitude(longitude: number): number {
