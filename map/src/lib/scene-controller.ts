@@ -1,5 +1,7 @@
 import {
   type SpatialFeature,
+  type SpatialActionActivatedEvent,
+  type SpatialResourceActivatedEvent,
   type SpatialFeatureSelectedEvent,
   type SpatialScene,
   validateScene,
@@ -9,6 +11,18 @@ function snapshotFeature(feature: SpatialFeature): SpatialFeature {
   return Object.freeze({
     ...feature,
     coordinate: Object.freeze({ ...feature.coordinate }),
+    ...(feature.information
+      ? {
+          information: Object.freeze(
+            feature.information.map((section) =>
+              Object.freeze({
+                ...section,
+                rows: Object.freeze(section.rows.map((row) => Object.freeze({ ...row }))),
+              }),
+            ),
+          ),
+        }
+      : {}),
     ...(feature.resources
       ? { resources: Object.freeze(feature.resources.map((resource) => Object.freeze({ ...resource }))) }
       : {}),
@@ -54,5 +68,29 @@ export class SpatialSceneController {
       featureRef: feature.ref,
       sourceRef: feature.sourceRef,
     });
+  }
+
+  activateResource(featureRef: string, resourceRef: string): SpatialResourceActivatedEvent {
+    const feature = this.requireFeature(featureRef);
+    if (!feature.resources?.some((resource) => resource.ref === resourceRef)) {
+      throw new Error(`Unknown spatial resource ref: ${resourceRef}`);
+    }
+    return Object.freeze({ featureRef, sourceRef: feature.sourceRef, resourceRef });
+  }
+
+  activateAction(featureRef: string, actionRef: string): SpatialActionActivatedEvent {
+    const feature = this.requireFeature(featureRef);
+    if (!feature.actions?.some((action) => action.ref === actionRef)) {
+      throw new Error(`Unknown spatial action ref: ${actionRef}`);
+    }
+    return Object.freeze({ featureRef, sourceRef: feature.sourceRef, actionRef });
+  }
+
+  private requireFeature(featureRef: string): SpatialFeature {
+    const feature = this.scene.features.find((candidate) => candidate.ref === featureRef);
+    if (!feature) {
+      throw new Error(`Unknown spatial feature ref: ${featureRef}`);
+    }
+    return feature;
   }
 }

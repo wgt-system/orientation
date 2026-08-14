@@ -36,12 +36,23 @@ export type SpatialAction = Readonly<{
   label: string;
 }>;
 
+export type SpatialInformationRow = Readonly<{
+  label: string;
+  value: string;
+}>;
+
+export type SpatialInformationSection = Readonly<{
+  title?: string;
+  rows: readonly SpatialInformationRow[];
+}>;
+
 export type SpatialFeature = Readonly<{
   ref: string;
   sourceRef: string;
   coordinate: Coordinate;
   title: string;
   subtitle?: string;
+  information?: readonly SpatialInformationSection[];
   resources?: readonly SpatialResource[];
   actions?: readonly SpatialAction[];
 }>;
@@ -54,6 +65,18 @@ export type SpatialScene = Readonly<{
 export type SpatialFeatureSelectedEvent = Readonly<{
   featureRef: string;
   sourceRef: string;
+}>;
+
+export type SpatialResourceActivatedEvent = Readonly<{
+  featureRef: string;
+  sourceRef: string;
+  resourceRef: string;
+}>;
+
+export type SpatialActionActivatedEvent = Readonly<{
+  featureRef: string;
+  sourceRef: string;
+  actionRef: string;
 }>;
 
 export function isCoordinate(value: unknown): value is Coordinate {
@@ -70,6 +93,79 @@ export function isCoordinate(value: unknown): value is Coordinate {
     coordinate.latitude >= -90 &&
     coordinate.latitude <= 90
   );
+}
+
+function requireNonEmpty(value: unknown, message: string): asserts value is string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(message);
+  }
+}
+
+function validateResource(resource: SpatialResource, featureRef: string, refs: Set<string>): void {
+  requireNonEmpty(resource.ref, `Spatial resource ref must be non-empty: ${featureRef}`);
+  requireNonEmpty(resource.label, `Spatial resource label must be non-empty: ${featureRef}`);
+  if (refs.has(resource.ref)) {
+    throw new Error(`Duplicate spatial resource ref: ${resource.ref}`);
+  }
+  refs.add(resource.ref);
+
+  if (resource.uri !== undefined) {
+    if (typeof resource.uri !== "string" || !resource.uri.trim()) {
+      throw new Error(`Spatial resource URI must be a valid HTTP(S) URI: ${resource.ref}`);
+    }
+    let parsed: URL;
+    try {
+      parsed = new URL(resource.uri);
+    } catch {
+      throw new Error(`Spatial resource URI must be a valid HTTP(S) URI: ${resource.ref}`);
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error(`Spatial resource URI scheme is not allowed: ${resource.ref}`);
+    }
+  }
+}
+
+function validateFeatureContent(feature: SpatialFeature): void {
+  if (feature.information !== undefined) {
+    if (!Array.isArray(feature.information)) {
+      throw new Error(`Spatial feature information must be an array: ${feature.ref}`);
+    }
+    feature.information.forEach((section: SpatialInformationSection) => {
+      if (section.title !== undefined) {
+        requireNonEmpty(section.title, `Spatial information section title must be non-empty: ${feature.ref}`);
+      }
+      if (!Array.isArray(section.rows) || section.rows.length === 0) {
+        throw new Error(`Spatial information section rows must be non-empty: ${feature.ref}`);
+      }
+      section.rows.forEach((row) => {
+        requireNonEmpty(row.label, `Spatial information row label must be non-empty: ${feature.ref}`);
+        requireNonEmpty(row.value, `Spatial information row value must be non-empty: ${feature.ref}`);
+      });
+    });
+  }
+
+  if (feature.resources !== undefined) {
+    if (!Array.isArray(feature.resources)) {
+      throw new Error(`Spatial feature resources must be an array: ${feature.ref}`);
+    }
+    const refs = new Set<string>();
+    feature.resources.forEach((resource) => validateResource(resource, feature.ref, refs));
+  }
+
+  if (feature.actions !== undefined) {
+    if (!Array.isArray(feature.actions)) {
+      throw new Error(`Spatial feature actions must be an array: ${feature.ref}`);
+    }
+    const refs = new Set<string>();
+    feature.actions.forEach((action) => {
+      requireNonEmpty(action.ref, `Spatial action ref must be non-empty: ${feature.ref}`);
+      requireNonEmpty(action.label, `Spatial action label must be non-empty: ${feature.ref}`);
+      if (refs.has(action.ref)) {
+        throw new Error(`Duplicate spatial action ref: ${action.ref}`);
+      }
+      refs.add(action.ref);
+    });
+  }
 }
 
 export function validateScene(scene: SpatialScene): void {
@@ -98,12 +194,8 @@ export function validateScene(scene: SpatialScene): void {
   const refs = new Set<string>();
 
   for (const feature of scene.features) {
-    if (!feature.ref.trim()) {
-      throw new Error("Spatial feature ref must be non-empty.");
-    }
-    if (!feature.sourceRef.trim()) {
-      throw new Error(`Spatial feature source ref must be non-empty: ${feature.ref}`);
-    }
+    requireNonEmpty(feature.ref, "Spatial feature ref must be non-empty.");
+    requireNonEmpty(feature.sourceRef, `Spatial feature source ref must be non-empty: ${feature.ref}`);
     if (refs.has(feature.ref)) {
       throw new Error(`Duplicate spatial feature ref: ${feature.ref}`);
     }
@@ -112,9 +204,8 @@ export function validateScene(scene: SpatialScene): void {
     if (!isCoordinate(feature.coordinate)) {
       throw new Error(`Invalid coordinate for feature: ${feature.ref}`);
     }
-    if (!feature.title.trim()) {
-      throw new Error(`Spatial feature title must be non-empty: ${feature.ref}`);
-    }
+    requireNonEmpty(feature.title, `Spatial feature title must be non-empty: ${feature.ref}`);
+    validateFeatureContent(feature);
   }
 }
 

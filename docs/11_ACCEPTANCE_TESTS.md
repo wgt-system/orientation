@@ -1,6 +1,6 @@
 # Orientation – Acceptance Tests
 
-**Status:** Bootstrap baseline plus Issue #1 map-surface acceptance
+**Status:** Bootstrap baseline plus Issue #1 and Issue #2 map-surface acceptance
 
 ## Architecture invariants
 
@@ -35,6 +35,11 @@ Given three generic Spatial Features:
 Issue #1 additionally requires deterministic repeated scene replacement, empty-scene clearing,
 feature/source identity selection events, generic empty/focus/fit/preserve viewport resolution,
 explicit renderer lifecycle states, and no duplicate marker handlers after updates.
+
+Issue #2 additionally requires validated generic information/resources/actions, duplicate and
+unsafe-URI rejection, immutable rich snapshots, opaque resource/action activation events,
+keyboard-accessible text-only details controls, stale-detail replacement cleanup, and host-owned
+resource/action execution.
 
 ## Future integration gates
 

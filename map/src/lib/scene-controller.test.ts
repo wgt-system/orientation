@@ -51,4 +51,47 @@ describe("SpatialSceneController", () => {
     expect(controller.current()).not.toBe(scene);
     expect(controller.current().features).not.toBe(scene.features);
   });
+
+  it("deeply snapshots information, resources and actions", () => {
+    const scene = {
+      features: [{
+        ...feature,
+        information: [{ title: "Details", rows: [{ label: "Kind", value: "Example" }] }],
+        resources: [{ ref: "resource/1", label: "Resource", uri: "https://example.com" }],
+        actions: [{ ref: "action/1", label: "Action" }],
+      }],
+    };
+    const snapshot = new SpatialSceneController().replace(scene);
+
+    expect(snapshot.features[0]!.information).not.toBe(scene.features[0]!.information);
+    expect(snapshot.features[0]!.information![0]!.rows).not.toBe(scene.features[0]!.information![0]!.rows);
+    expect(Object.isFrozen(snapshot.features[0]!.information)).toBe(true);
+    expect(Object.isFrozen(snapshot.features[0]!.information![0]!.rows)).toBe(true);
+    expect(Object.isFrozen(snapshot.features[0]!.resources)).toBe(true);
+    expect(Object.isFrozen(snapshot.features[0]!.actions)).toBe(true);
+  });
+
+  it("returns host-mediated resource and action activation identities", () => {
+    const controller = new SpatialSceneController();
+    controller.replace({
+      features: [{
+        ...feature,
+        resources: [{ ref: "resource/1", label: "Resource" }],
+        actions: [{ ref: "action/1", label: "Action" }],
+      }],
+    });
+
+    expect(controller.activateResource("feature/1", "resource/1")).toEqual({
+      featureRef: "feature/1",
+      sourceRef: "provider/1",
+      resourceRef: "resource/1",
+    });
+    expect(controller.activateAction("feature/1", "action/1")).toEqual({
+      featureRef: "feature/1",
+      sourceRef: "provider/1",
+      actionRef: "action/1",
+    });
+    controller.clear();
+    expect(() => controller.activateResource("feature/1", "resource/1")).toThrow(/Unknown spatial feature/);
+  });
 });

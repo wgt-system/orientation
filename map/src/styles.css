@@ -88,6 +88,55 @@ h1 {
   color: #536267;
 }
 
+.selection h2 {
+  margin: 12px 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5f6f73;
+}
+
+.selection dl {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.selection dt {
+  color: #5f6f73;
+}
+
+.selection dd {
+  margin: 0;
+  color: #314f54;
+}
+
+.selection-controls {
+  display: grid;
+  gap: 6px;
+}
+
+.selection-controls button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgb(33 62 67 / 20%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 72%);
+  color: #213e43;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selection-controls button:hover,
+.selection-controls button:focus-visible {
+  border-color: #315a60;
+  outline: 3px solid rgb(49 90 96 / 18%);
+  outline-offset: 1px;
+}
+
 .selection code {
   width: fit-content;
   margin-top: 4px;

@@ -2,6 +2,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "../styles.css";
 
 import { OrientationMapSurface } from "../lib/map-surface";
+import { renderFeatureDetails } from "../lib/feature-details";
 import type { SpatialFeature, SpatialFeatureSelectedEvent, SpatialScene } from "../lib/model";
 
 const mapContainer = document.querySelector<HTMLElement>("#map");
@@ -21,6 +22,15 @@ const scene: SpatialScene = {
       coordinate: { longitude: 9.9937, latitude: 53.5511 },
       title: "Hamburg",
       subtitle: "Generic reference feature",
+      information: [
+        {
+          title: "Example details",
+          rows: [
+            { label: "Category", value: "Provider-neutral example" },
+            { label: "Availability", value: "Presented by the host" },
+          ],
+        },
+      ],
       resources: [
         {
           ref: "reference/resource",
@@ -55,32 +65,18 @@ function renderSelection(event: SpatialFeatureSelectedEvent): void {
     return;
   }
 
-  const resourceLines =
-    feature.resources?.map((resource) => `Resource: ${resource.label}`) ?? [];
-  const actionLines =
-    feature.actions?.map((action) => `Action: ${action.label}`) ?? [];
-
-  selectionElement.replaceChildren();
-
-  const title = document.createElement("strong");
-  title.textContent = feature.title;
-  selectionElement.append(title);
-
-  if (feature.subtitle) {
-    const subtitle = document.createElement("span");
-    subtitle.textContent = feature.subtitle;
-    selectionElement.append(subtitle);
-  }
-
-  for (const line of [...resourceLines, ...actionLines]) {
-    const row = document.createElement("small");
-    row.textContent = line;
-    selectionElement.append(row);
-  }
-
-  const ref = document.createElement("code");
-  ref.textContent = feature.ref;
-  selectionElement.append(ref);
+  renderFeatureDetails(selectionElement, feature, {
+    onResourceActivated: (activation) => {
+      const message = document.createElement("small");
+      message.textContent = `Host received resource activation: ${activation.resourceRef}`;
+      selectionElement.append(message);
+    },
+    onActionActivated: (activation) => {
+      const message = document.createElement("small");
+      message.textContent = `Host received action activation: ${activation.actionRef}`;
+      selectionElement.append(message);
+    },
+  });
 }
 
 const surface = new OrientationMapSurface(mapContainer, {

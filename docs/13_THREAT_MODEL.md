@@ -33,6 +33,8 @@ Controls:
 
 - render text as text, not arbitrary HTML;
 - do not accept executable HTML/script fragments in Spatial Feature contracts;
+- validate resource URIs and allow only HTTP(S) schemes in the generic web-resource model;
+- construct details controls with DOM text nodes and buttons, never provider HTML or CSS;
 - keep resource/action execution host-mediated.
 
 ### External URLs

@@ -3,7 +3,9 @@ import {
   resolveViewport,
   type ResolvedViewport,
   type SpatialFeature,
+  type SpatialActionActivatedEvent,
   type SpatialFeatureSelectedEvent,
+  type SpatialResourceActivatedEvent,
   type SpatialScene,
 } from "./model";
 import { SpatialSceneController } from "./scene-controller";
@@ -16,6 +18,8 @@ export type OrientationMapStatusEvent = Readonly<{
 
 export type OrientationMapCallbacks = Readonly<{
   onFeatureSelected?: (event: SpatialFeatureSelectedEvent) => void;
+  onResourceActivated?: (event: SpatialResourceActivatedEvent) => void;
+  onActionActivated?: (event: SpatialActionActivatedEvent) => void;
   onStatusChanged?: (event: OrientationMapStatusEvent) => void;
 }>;
 
@@ -69,6 +73,16 @@ export class OrientationMapSurface {
       this.markers.push(this.createMarker(feature));
     }
     this.applyViewport(viewport);
+  }
+
+  activateResource(featureRef: string, resourceRef: string): void {
+    this.assertUsable();
+    this.callbacks.onResourceActivated?.(this.sceneController.activateResource(featureRef, resourceRef));
+  }
+
+  activateAction(featureRef: string, actionRef: string): void {
+    this.assertUsable();
+    this.callbacks.onActionActivated?.(this.sceneController.activateAction(featureRef, actionRef));
   }
 
   destroy(): void {

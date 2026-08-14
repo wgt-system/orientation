@@ -80,6 +80,56 @@ describe("validateScene", () => {
 
     expect(() => validateScene(scene)).toThrow(/Duplicate/);
   });
+
+  it("accepts rich generic information, resources and actions", () => {
+    expect(() =>
+      validateScene({
+        features: [
+          {
+            ref: "feature/rich",
+            sourceRef: "provider/example",
+            coordinate: { longitude: 10, latitude: 50 },
+            title: "Rich feature",
+            information: [{ title: "Details", rows: [{ label: "Kind", value: "Example" }] }],
+            resources: [{ ref: "resource/1", label: "Read more", uri: "https://example.com/item" }],
+            actions: [{ ref: "action/1", label: "Inspect" }],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects malformed rich content, duplicate refs and unsafe URIs", () => {
+    const base = {
+      ref: "feature/rich",
+      sourceRef: "provider/example",
+      coordinate: { longitude: 10, latitude: 50 },
+      title: "Rich feature",
+    } as const;
+
+    expect(() =>
+      validateScene({
+        features: [{ ...base, resources: [
+          { ref: "same", label: "One" },
+          { ref: "same", label: "Two" },
+        ] }],
+      }),
+    ).toThrow(/Duplicate spatial resource/);
+    expect(() =>
+      validateScene({
+        features: [{ ...base, actions: [
+          { ref: "same", label: "One" },
+          { ref: "same", label: "Two" },
+        ] }],
+      }),
+    ).toThrow(/Duplicate spatial action/);
+    expect(() =>
+      validateScene({ features: [{ ...base, resources: [{ ref: "unsafe", label: "Unsafe", uri: "javascript:alert(1)" }] }] }),
+    ).toThrow(/scheme is not allowed/);
+    expect(() =>
+      validateScene({ features: [{ ...base, resources: [{ ref: "invalid", label: "Invalid", uri: "not a URI" }] }] }),
+    ).toThrow(/valid HTTP/);
+  });
 });
 
 describe("resolveViewport", () => {

@@ -10,6 +10,9 @@
 - **Viewport Intent** — minimal generic instruction for automatic feature focus/fit or preserving the current viewport; it is not a broad camera contract.
 - **Spatial Resource** — an externally addressable resource attached to a spatial feature, with provider-supplied label/metadata. Activation is emitted to the host.
 - **Spatial Action** — a host/provider-defined action descriptor attached to a spatial feature. Orientation presents/raises it without owning its business meaning.
+- **Spatial Information Section** — a provider-neutral titled group of labelled text rows rendered as feature detail; it is presentation data, not foreign-domain semantics.
+- **Resource Activation** — a generic event carrying feature/source/resource references; the host decides whether and how to navigate or execute it.
+- **Action Activation** — a generic event carrying feature/source/action references; the host decides its execution semantics.
 - **Place** — a provider-backed generic geographic place/POI result.
 - **Geocoding** — resolving textual place/address input to geographic candidates.
 - **Reverse Geocoding** — resolving a coordinate to provider-backed place/address candidates.

@@ -30,6 +30,8 @@ limited to generic automatic or preserve behavior; no transport shape is frozen 
 
 It intentionally permits rich content without imposing Vocation/Illumination semantics.
 
+Rich content is limited to optional information sections (labelled text rows), resources with stable refs/labels and safe HTTP(S) URIs, and actions with stable refs/labels. Activation events carry only opaque feature/source/resource or feature/source/action refs.
+
 ## RouteView
 
 - route reference;

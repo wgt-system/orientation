@@ -70,6 +70,8 @@ Exact event schemas must be introduced with tests when used.
 
 Orientation may render generic information/resource/action structures because exploration is part of its geospatial capability.
 
+The map surface now validates rich feature content, snapshots information sections and resource/action arrays immutably, and exposes generic resource/action activation identities. Its reference details presenter creates text nodes and keyboard-accessible buttons; it does not interpret labels or inject provider HTML.
+
 The source of those structures retains semantic authority.
 
 For example, Vocation can say "this resource is the preferred job posting." Orientation can render a button/entry, but it does not decide which posting is preferred.
@@ -77,6 +79,8 @@ For example, Vocation can say "this resource is the preferred job posting." Orie
 ## External-resource execution
 
 Prefer emitting activation events to the host rather than unconditionally navigating from core renderer code.
+
+The reusable surface does not call browser navigation APIs or fetch resource URIs. The reference host demonstrates activation by displaying the received opaque identity.
 
 This supports:
 
