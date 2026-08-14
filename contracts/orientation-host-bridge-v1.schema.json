@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/wgt-system/orientation/blob/dev/contracts/orientation-host-bridge-v1.schema.json",
+  "$id": "https://schemas.wgt-system.org/orientation/host-bridge/1.0/schema.json",
   "title": "Orientation Host Bridge 1.0",
   "oneOf": [
     { "$ref": "#/$defs/sceneReplace" },

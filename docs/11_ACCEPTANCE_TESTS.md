@@ -48,7 +48,11 @@ no retained location history, and deterministic cleanup across renderer lifecycl
 Issue #4 acceptance evidence includes the validated `orientation.host-bridge` 1.0
 JSON envelope/schema, independently testable protocol core, deterministic bridge/map
 lifecycle, separate Embed Host artifact, malformed-message rejection, timestamp/
-accuracy/antimeridian hardening, 500-feature sanity fixture, and Reference/Embed browser smoke.
+accuracy/antimeridian hardening, a model-only 500-feature fixture, and real
+Reference/Embed browser evidence for 500 rendered markers, replacement, clearing,
+reload, selection, rich actions, current location and antimeridian viewport behavior.
+Accuracy areas larger than 5,000 km or enclosing a pole are intentionally omitted
+from the display while the validated position point remains available.
 
 ## Future integration gates
 

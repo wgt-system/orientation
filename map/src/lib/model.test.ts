@@ -167,8 +167,10 @@ describe("resolveViewport", () => {
     ).toEqual({
       kind: "fit",
       bounds: {
-        southWest: { longitude: 10, latitude: 50 },
-        northEast: { longitude: 20, latitude: 60 },
+        west: 10,
+        south: 50,
+        east: 20,
+        north: 60,
       },
       padding: 48,
       maxZoom: 14,
@@ -185,8 +187,10 @@ describe("resolveViewport", () => {
     })).toEqual({
       kind: "fit",
       bounds: {
-        southWest: { longitude: 179, latitude: 10 },
-        northEast: { longitude: 181, latitude: 11 },
+        west: 179,
+        south: 10,
+        east: 181,
+        north: 11,
       },
       padding: 48,
       maxZoom: 14,

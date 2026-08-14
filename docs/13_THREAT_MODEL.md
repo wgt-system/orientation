@@ -82,6 +82,11 @@ message-type switch; it does not use prototype lookup, eval, Function
 constructors, arbitrary navigation or fetch. Bridge errors expose stable safe
 codes/messages without raw payloads or stacks.
 
+When embedded, the parent page is the authorized host context. Outbound
+`postMessage` uses `"*"` deliberately so the same artifact works from local
+files and generic WebViews; the bridge does not send scene or current-position
+data without a corresponding host command or user interaction.
+
 ### Tile/style supply chain
 
 Controls:

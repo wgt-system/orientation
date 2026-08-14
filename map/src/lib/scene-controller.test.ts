@@ -13,6 +13,7 @@ describe("SpatialSceneController", () => {
     const controller = new SpatialSceneController();
 
     controller.replace({ features: [feature] });
+    expect(controller.find("feature/1", "provider/1")?.title).toBe("Feature");
     expect(controller.current().features.map((item) => item.ref)).toEqual(["feature/1"]);
 
     controller.replace({
@@ -41,6 +42,7 @@ describe("SpatialSceneController", () => {
 
     controller.replace({ features: [] });
     expect(() => controller.select("feature/1")).toThrow(/Unknown spatial feature ref/);
+    expect(controller.find("feature/1", "provider/1")).toBeUndefined();
   });
 
   it("does not retain mutable caller-owned scene state", () => {

@@ -71,6 +71,7 @@ describe("Orientation host bridge protocol", () => {
     const ajv = new Ajv2020({ strict: false });
     addFormats(ajv);
     const validate = ajv.compile(schema);
+    expect(schema.$id).toBe("https://schemas.wgt-system.org/orientation/host-bridge/1.0/schema.json");
     const examples = [
       { contract: ORIENTATION_HOST_BRIDGE_CONTRACT, version: ORIENTATION_HOST_BRIDGE_VERSION, type: "scene.replace", payload: validScene },
       { contract: ORIENTATION_HOST_BRIDGE_CONTRACT, version: ORIENTATION_HOST_BRIDGE_VERSION, type: "current-position.set", payload: validPosition },
@@ -81,5 +82,13 @@ describe("Orientation host bridge protocol", () => {
     expect(validate({ ...examples[0], version: "9.0" })).toBe(false);
     expect(validate({ ...examples[0], payload: { features: "not-an-array" } })).toBe(false);
     expect(validate({ ...examples[1], payload: { ...validPosition, observedAt: "2026-02-31T12:00:00.000Z" } })).toBe(false);
+    for (const uri of ["javascript:alert(1)", "data:text/plain,x", "file:///tmp/x", "HTTPS://example.com/item"]) {
+      const candidate = { ...examples[0], payload: { features: [{ ref: "f", sourceRef: "p", coordinate: { longitude: 0, latitude: 0 }, title: "F", resources: [{ ref: "r", label: "R", uri }] }] } };
+      expect(validate(candidate)).toBe(false);
+      expect(() => parseInboundMessage(JSON.stringify(candidate))).toThrow();
+    }
+    const httpResource = { ...examples[0], payload: { features: [{ ref: "f", sourceRef: "p", coordinate: { longitude: 0, latitude: 0 }, title: "F", resources: [{ ref: "r", label: "R", uri: "https://example.com/item" }] }] } };
+    expect(validate(httpResource)).toBe(true);
+    expect(() => parseInboundMessage(JSON.stringify(httpResource))).not.toThrow();
   });
 });

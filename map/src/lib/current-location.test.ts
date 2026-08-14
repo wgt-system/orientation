@@ -61,6 +61,8 @@ describe("CurrentLocationController", () => {
 describe("createAccuracyGeometry", () => {
   it("creates a geographic accuracy polygon in metres", () => {
     const geometry = createAccuracyGeometry(position);
+    expect(geometry).not.toBeNull();
+    if (!geometry) return;
     const ring = geometry.geometry.coordinates[0]!;
 
     expect(geometry.geometry.type).toBe("Polygon");
@@ -73,14 +75,31 @@ describe("createAccuracyGeometry", () => {
   it("keeps polar, antimeridian and large-accuracy coordinates valid", () => {
     for (const sample of [
       { ...position, coordinate: { longitude: 179.9, latitude: 80 }, accuracyMeters: 50_000 },
-      { ...position, coordinate: { longitude: -179.9, latitude: 89.9 }, accuracyMeters: 500_000 },
       { ...position, coordinate: { longitude: 0, latitude: 0 }, accuracyMeters: 0 },
-      { ...position, coordinate: { longitude: 0, latitude: 0 }, accuracyMeters: 20_000_000 },
+      { ...position, coordinate: { longitude: 0, latitude: 0 }, accuracyMeters: 0 },
     ]) {
-      const ring = createAccuracyGeometry(sample).geometry.coordinates[0]!;
-      expect(ring.every(([longitude, latitude]) =>
-        longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90,
-      )).toBe(true);
+      const geometry = createAccuracyGeometry(sample);
+      expect(geometry).not.toBeNull();
+      if (!geometry) continue;
+      const rings = geometry.geometry.type === "Polygon"
+        ? geometry.geometry.coordinates
+        : geometry.geometry.coordinates.flat();
+      for (const ring of rings) {
+        expect(ring.every(([longitude, latitude]) => longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90)).toBe(true);
+        expect(Math.max(...ring.slice(1).map(([longitude], index) => Math.abs(longitude - ring[index]![0])))).toBeLessThan(181);
+      }
     }
+  });
+
+  it("splits antimeridian accuracy into canonical parts without world-spanning edges", () => {
+    const geometry = createAccuracyGeometry({ ...position, coordinate: { longitude: 179.9, latitude: 0 }, accuracyMeters: 50_000 });
+    expect(geometry?.geometry.type).toBe("MultiPolygon");
+    if (!geometry || geometry.geometry.type !== "MultiPolygon") return;
+    expect(geometry.geometry.coordinates.length).toBe(2);
+  });
+
+  it("omits pathological accuracy areas while retaining the position fix", () => {
+    expect(createAccuracyGeometry({ ...position, accuracyMeters: 5_000_001 })).toBeNull();
+    expect(createAccuracyGeometry({ ...position, coordinate: { longitude: -179.9, latitude: 89.9 }, accuracyMeters: 500_000 })).toBeNull();
   });
 });

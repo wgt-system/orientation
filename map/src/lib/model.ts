@@ -9,9 +9,11 @@ export type ViewportIntent = Readonly<{
   maxZoom?: number;
 }>;
 
-export type CoordinateBounds = Readonly<{
-  southWest: Coordinate;
-  northEast: Coordinate;
+export type ResolvedViewportBounds = Readonly<{
+  west: number;
+  south: number;
+  east: number;
+  north: number;
 }>;
 
 export type ResolvedViewport =
@@ -20,7 +22,7 @@ export type ResolvedViewport =
   | Readonly<{ kind: "focus"; coordinate: Coordinate; zoom: number }>
   | Readonly<{
       kind: "fit";
-      bounds: CoordinateBounds;
+      bounds: ResolvedViewportBounds;
       padding: number;
       maxZoom: number;
     }>;
@@ -111,6 +113,12 @@ function validateResource(resource: SpatialResource, featureRef: string, refs: S
 
   if (resource.uri !== undefined) {
     if (typeof resource.uri !== "string" || !resource.uri.trim()) {
+      throw new Error(`Spatial resource URI must be a valid HTTP(S) URI: ${resource.ref}`);
+    }
+    if (/^[a-z]+:/i.test(resource.uri) && !/^(?:http|https):\/\//.test(resource.uri)) {
+      throw new Error(`Spatial resource URI scheme is not allowed: ${resource.ref}`);
+    }
+    if (!/^[a-z]+:\/\//i.test(resource.uri)) {
       throw new Error(`Spatial resource URI must be a valid HTTP(S) URI: ${resource.ref}`);
     }
     let parsed: URL;
@@ -235,14 +243,10 @@ export function resolveViewport(scene: SpatialScene): ResolvedViewport {
   return {
     kind: "fit",
     bounds: {
-      southWest: {
-        longitude: longitudeBounds.start,
-        latitude: Math.min(...latitudes),
-      },
-      northEast: {
-        longitude: longitudeBounds.end,
-        latitude: Math.max(...latitudes),
-      },
+      west: longitudeBounds.start,
+      south: Math.min(...latitudes),
+      east: longitudeBounds.end,
+      north: Math.max(...latitudes),
     },
     padding: scene.viewport?.padding ?? 48,
     maxZoom: scene.viewport?.maxZoom ?? 14,

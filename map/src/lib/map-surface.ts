@@ -102,6 +102,15 @@ export class OrientationMapSurface {
     return this.currentLocationController.current();
   }
 
+  feature(featureRef: string, sourceRef: string): SpatialFeature | undefined {
+    this.assertUsable();
+    return this.sceneController.find(featureRef, sourceRef);
+  }
+
+  featureMarkerCount(): number {
+    return this.markers.length;
+  }
+
   activateResource(featureRef: string, resourceRef: string): void {
     this.assertUsable();
     this.callbacks.onResourceActivated?.(this.sceneController.activateResource(featureRef, resourceRef));
@@ -154,8 +163,8 @@ export class OrientationMapSurface {
       case "fit":
         this.map.fitBounds(
           [
-            [viewport.bounds.southWest.longitude, viewport.bounds.southWest.latitude],
-            [viewport.bounds.northEast.longitude, viewport.bounds.northEast.latitude],
+            [viewport.bounds.west, viewport.bounds.south],
+            [viewport.bounds.east, viewport.bounds.north],
           ],
           { padding: viewport.padding, maxZoom: viewport.maxZoom, duration: 0 },
         );
@@ -260,10 +269,11 @@ export class OrientationMapSurface {
 }
 
 function createLocationFeatureCollection(position: PositionFix) {
+  const accuracy = createAccuracyGeometry(position);
   return {
     type: "FeatureCollection" as const,
     features: [
-      createAccuracyGeometry(position),
+      ...(accuracy ? [accuracy] : []),
       {
         type: "Feature" as const,
         geometry: {

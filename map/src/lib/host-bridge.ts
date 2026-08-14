@@ -1,6 +1,5 @@
 import { OrientationMapSurface, type OrientationMapCallbacks } from "./map-surface";
 import { renderFeatureDetails } from "./feature-details";
-import { snapshotScene } from "./scene-controller";
 import { validatePositionFix, type PositionFix } from "./current-location";
 import {
   type SpatialActionActivatedEvent,
@@ -47,7 +46,6 @@ export class OrientationHostBridge {
   private readonly core: OrientationHostBridgeCore;
   private readonly sink: OrientationBridgeMessageSink;
   private readonly options: OrientationHostBridgeOptions;
-  private scene: SpatialScene = snapshotScene({ features: [] });
 
   constructor(container: HTMLElement, sink: OrientationBridgeMessageSink, options: OrientationHostBridgeOptions = {}) {
     this.sink = sink;
@@ -70,7 +68,6 @@ export class OrientationHostBridge {
     this.core = new OrientationHostBridgeCore(sink, {
       replaceScene: (scene) => {
         this.surface.setScene(scene);
-        this.scene = snapshotScene(scene);
         this.options.detailsContainer?.replaceChildren();
       },
       setCurrentPosition: (position) => this.surface.setCurrentPosition(position),
@@ -104,7 +101,7 @@ export class OrientationHostBridge {
   private renderDetails(featureRef: string, sourceRef: string): void {
     const container = this.options.detailsContainer;
     if (!container) return;
-    const feature = this.scene.features.find((candidate) => candidate.ref === featureRef && candidate.sourceRef === sourceRef);
+    const feature = this.surface.feature(featureRef, sourceRef);
     if (!feature) {
       container.replaceChildren();
       return;

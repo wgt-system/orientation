@@ -58,6 +58,12 @@ export class SpatialSceneController {
     return this.scene;
   }
 
+  find(featureRef: string, sourceRef: string): SpatialFeature | undefined {
+    return this.scene.features.find(
+      (candidate) => candidate.ref === featureRef && candidate.sourceRef === sourceRef,
+    );
+  }
+
   select(featureRef: string): SpatialFeatureSelectedEvent {
     const feature = this.scene.features.find((candidate) => candidate.ref === featureRef);
     if (!feature) {

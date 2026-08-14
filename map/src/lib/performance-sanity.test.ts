@@ -13,7 +13,7 @@ function createLargeScene(): SpatialScene {
   };
 }
 
-describe("v0.1.0 renderer sanity fixture", () => {
+describe("v0.1.0 model fixture", () => {
   it("validates and snapshots 500 provider features without retained history", () => {
     const scene = createLargeScene();
     validateScene(scene);
