@@ -2,7 +2,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "../styles.css";
 
 import { OrientationMapSurface } from "../lib/map-surface";
-import type { SpatialFeature, SpatialScene } from "../lib/model";
+import type { SpatialFeature, SpatialFeatureSelectedEvent, SpatialScene } from "../lib/model";
 
 const mapContainer = document.querySelector<HTMLElement>("#map");
 const selection = document.querySelector<HTMLElement>("#selection");
@@ -17,6 +17,7 @@ const scene: SpatialScene = {
   features: [
     {
       ref: "reference/hamburg",
+      sourceRef: "reference/provider",
       coordinate: { longitude: 9.9937, latitude: 53.5511 },
       title: "Hamburg",
       subtitle: "Generic reference feature",
@@ -31,12 +32,14 @@ const scene: SpatialScene = {
     },
     {
       ref: "reference/berlin",
+      sourceRef: "reference/provider",
       coordinate: { longitude: 13.405, latitude: 52.52 },
       title: "Berlin",
       subtitle: "A second provider-neutral feature",
     },
     {
       ref: "reference/karlsruhe",
+      sourceRef: "reference/provider",
       coordinate: { longitude: 8.4037, latitude: 49.0069 },
       title: "Karlsruhe",
       subtitle: "A third provider-neutral feature",
@@ -44,7 +47,14 @@ const scene: SpatialScene = {
   ],
 };
 
-function renderSelection(feature: SpatialFeature): void {
+function renderSelection(event: SpatialFeatureSelectedEvent): void {
+  const feature = scene.features.find(
+    (candidate) => candidate.ref === event.featureRef && candidate.sourceRef === event.sourceRef,
+  );
+  if (!feature) {
+    return;
+  }
+
   const resourceLines =
     feature.resources?.map((resource) => `Resource: ${resource.label}`) ?? [];
   const actionLines =

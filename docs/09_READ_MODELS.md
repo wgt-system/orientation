@@ -24,6 +24,10 @@ Generic map/exploration view:
 - actions;
 - visual hints.
 
+The reusable map-surface foundation requires each feature's opaque `ref` and `sourceRef` to be
+preserved in selection events. Scene replacement is deterministic, and viewport intent remains
+limited to generic automatic or preserve behavior; no transport shape is frozen by this model.
+
 It intentionally permits rich content without imposing Vocation/Illumination semantics.
 
 ## RouteView

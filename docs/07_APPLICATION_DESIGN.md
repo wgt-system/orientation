@@ -48,6 +48,14 @@ Orientation Map Surface
 
 The public surface must not expose MapLibre classes as contract types.
 
+The Issue #1 renderer foundation uses an immutable/read-oriented scene snapshot internally.
+Replacing a scene validates and replaces the complete feature set; it does not merge hidden
+foreign state. Generic selection emits opaque `featureRef` and `sourceRef` values, while
+renderer lifecycle emits only generic initializing/ready/error/destroyed status values.
+Viewport handling is deliberately limited to automatic empty/focus/fit behavior or preserving
+the current viewport. This is a reusable renderer boundary, not a frozen network, Published
+Contract, or WGT WebView bridge protocol.
+
 Initial generic events may include:
 
 - feature selected;
