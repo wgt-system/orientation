@@ -56,4 +56,4 @@ Introduced with the geocoding slice; must expose enough provider result informat
 - observed-at;
 - optional heading/speed.
 
-No location history is implied.
+The current implementation accepts a serializable `PositionFix` with coordinate, non-negative accuracy in metres and UTC ISO `observedAt`; heading/speed are not implemented in this slice. Current Location is independent from provider features, and no location history is implied.

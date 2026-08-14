@@ -3,7 +3,7 @@
 **Status:** Bootstrap baseline; contract names are not frozen unless explicitly stated.
 
 - **Coordinate** — geographic longitude/latitude pair validated by Orientation.
-- **Position Fix** — host-supplied current position with accuracy and timestamp; optionally heading/speed when supplied.
+- **Position Fix** — host-supplied current position with coordinate, non-negative horizontal accuracy in metres and a UTC ISO timestamp; it is independent of Spatial Features.
 - **Spatial Feature** — generic spatially referenced item presented/explored by Orientation. It carries an opaque reference to its source meaning.
 - **Source Reference** — opaque provider/source identity carried with a Spatial Feature and preserved in generic selection events.
 - **Spatial Scene** — the generic input state for a map surface: features, optional route/location overlays and viewport intent.

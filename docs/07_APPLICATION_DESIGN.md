@@ -95,6 +95,8 @@ Platform/browser permission and acquisition are host concerns.
 
 The host supplies PositionFix data to Orientation. Orientation owns generic validation/use/visualization of the supplied fix.
 
+The reusable map surface exposes `setCurrentPosition`, `clearCurrentPosition` and `currentPosition` independently from `setScene`. It renders a point plus a geographic accuracy polygon and preserves the user's viewport on updates; it does not follow or recenter automatically. No history is retained, and the future Issue #4 bridge remains undefined.
+
 ## Failure model
 
 Provider unavailability, invalid provider payloads, rate limiting and timeout are explicit application outcomes.

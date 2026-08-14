@@ -1,6 +1,6 @@
 # Orientation – Acceptance Tests
 
-**Status:** Bootstrap baseline plus Issue #1 and Issue #2 map-surface acceptance
+**Status:** Bootstrap baseline plus Issue #1, Issue #2 and Issue #3 map-surface acceptance
 
 ## Architecture invariants
 
@@ -40,6 +40,10 @@ Issue #2 additionally requires validated generic information/resources/actions, 
 unsafe-URI rejection, immutable rich snapshots, opaque resource/action activation events,
 keyboard-accessible text-only details controls, stale-detail replacement cleanup, and host-owned
 resource/action execution.
+
+Issue #3 additionally requires host-supplied immutable PositionFix validation, independent
+set/update/clear behavior, geographic accuracy visualization, no automatic viewport following,
+no retained location history, and deterministic cleanup across renderer lifecycle transitions.
 
 ## Future integration gates
 

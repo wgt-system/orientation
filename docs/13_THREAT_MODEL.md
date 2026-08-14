@@ -21,6 +21,7 @@ Controls:
 
 - no persistence/history by default;
 - host owns permission acquisition;
+- Orientation accepts only validated finite coordinates, non-negative accuracy and serialized UTC timestamps;
 - do not log coordinates at normal info level;
 - explicit retention decision required before storing position history;
 - avoid sending current position to providers that do not require it.

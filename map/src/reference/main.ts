@@ -3,6 +3,7 @@ import "../styles.css";
 
 import { OrientationMapSurface } from "../lib/map-surface";
 import { renderFeatureDetails } from "../lib/feature-details";
+import type { PositionFix } from "../lib/current-location";
 import type { SpatialFeature, SpatialFeatureSelectedEvent, SpatialScene } from "../lib/model";
 
 const mapContainer = document.querySelector<HTMLElement>("#map");
@@ -13,6 +14,15 @@ if (!mapContainer || !selection) {
 }
 
 const selectionElement = selection;
+const locationStatus = document.querySelector<HTMLElement>("#location-status");
+const setLocationButton = document.querySelector<HTMLButtonElement>("#set-location");
+const updateLocationButton = document.querySelector<HTMLButtonElement>("#update-location");
+const clearLocationButton = document.querySelector<HTMLButtonElement>("#clear-location");
+
+if (!locationStatus || !setLocationButton || !updateLocationButton || !clearLocationButton) {
+  throw new Error("Reference host location controls are incomplete.");
+}
+const locationStatusElement = locationStatus;
 
 const scene: SpatialScene = {
   features: [
@@ -84,5 +94,40 @@ const surface = new OrientationMapSurface(mapContainer, {
 });
 
 surface.setScene(scene);
+
+const samplePositions: PositionFix[] = [
+  {
+    coordinate: { longitude: 10.01, latitude: 53.55 },
+    accuracyMeters: 3500,
+    observedAt: "2026-08-14T12:00:00.000Z",
+  },
+  {
+    coordinate: { longitude: 10.08, latitude: 53.58 },
+    accuracyMeters: 1800,
+    observedAt: "2026-08-14T12:01:00.000Z",
+  },
+];
+let samplePositionIndex = 0;
+
+function setSamplePosition(): void {
+  const sample = samplePositions[samplePositionIndex]!;
+  surface.setCurrentPosition(sample);
+  locationStatusElement.textContent = `Sample position · ${sample.accuracyMeters} m accuracy`;
+}
+
+setLocationButton.addEventListener("click", () => {
+  samplePositionIndex = 0;
+  setSamplePosition();
+});
+
+updateLocationButton.addEventListener("click", () => {
+  samplePositionIndex = Math.min(samplePositionIndex + 1, samplePositions.length - 1);
+  setSamplePosition();
+});
+
+clearLocationButton.addEventListener("click", () => {
+  surface.clearCurrentPosition();
+  locationStatusElement.textContent = "No position supplied.";
+});
 
 window.addEventListener("beforeunload", () => surface.destroy(), { once: true });

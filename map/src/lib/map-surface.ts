@@ -1,4 +1,4 @@
-import { Map, Marker, NavigationControl } from "maplibre-gl";
+import { Map, Marker, NavigationControl, type GeoJSONSource } from "maplibre-gl";
 import {
   resolveViewport,
   type ResolvedViewport,
@@ -9,6 +9,14 @@ import {
   type SpatialScene,
 } from "./model";
 import { SpatialSceneController } from "./scene-controller";
+import {
+  createAccuracyGeometry,
+  CurrentLocationController,
+  type PositionFix,
+} from "./current-location";
+
+const CURRENT_LOCATION_SOURCE = "orientation-current-location";
+const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] } as const;
 
 export type OrientationMapStatus = "initializing" | "ready" | "error" | "destroyed";
 
@@ -25,6 +33,7 @@ export type OrientationMapCallbacks = Readonly<{
 
 export class OrientationMapSurface {
   private readonly sceneController = new SpatialSceneController();
+  private readonly currentLocationController = new CurrentLocationController();
   private readonly callbacks: OrientationMapCallbacks;
   private readonly map: Map;
   private markers: Marker[] = [];
@@ -44,6 +53,8 @@ export class OrientationMapSurface {
       this.map.addControl(new NavigationControl(), "top-right");
       this.map.once("load", () => {
         if (this.status !== "destroyed") {
+          this.installCurrentLocationLayers();
+          this.renderCurrentLocation();
           this.setStatus("ready");
         }
       });
@@ -75,6 +86,22 @@ export class OrientationMapSurface {
     this.applyViewport(viewport);
   }
 
+  setCurrentPosition(position: PositionFix): void {
+    this.assertUsable();
+    this.currentLocationController.set(position);
+    this.renderCurrentLocation();
+  }
+
+  clearCurrentPosition(): void {
+    this.assertUsable();
+    this.currentLocationController.clear();
+    this.renderCurrentLocation();
+  }
+
+  currentPosition(): PositionFix | null {
+    return this.currentLocationController.current();
+  }
+
   activateResource(featureRef: string, resourceRef: string): void {
     this.assertUsable();
     this.callbacks.onResourceActivated?.(this.sceneController.activateResource(featureRef, resourceRef));
@@ -92,6 +119,8 @@ export class OrientationMapSurface {
 
     this.clearMarkers();
     this.sceneController.clear();
+    this.currentLocationController.clear();
+    this.removeCurrentLocationLayers();
     this.map.remove();
     this.setStatus("destroyed");
   }
@@ -141,6 +170,76 @@ export class OrientationMapSurface {
     this.markers = [];
   }
 
+  private installCurrentLocationLayers(): void {
+    if (this.map.getSource(CURRENT_LOCATION_SOURCE)) {
+      return;
+    }
+
+    this.map.addSource(CURRENT_LOCATION_SOURCE, {
+      type: "geojson",
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+    this.map.addLayer({
+      id: "orientation-current-location-accuracy",
+      type: "fill",
+      source: CURRENT_LOCATION_SOURCE,
+      paint: {
+        "fill-color": "#4d8290",
+        "fill-opacity": 0.28,
+      },
+    });
+    this.map.addLayer({
+      id: "orientation-current-location-accuracy-outline",
+      type: "line",
+      source: CURRENT_LOCATION_SOURCE,
+      paint: {
+        "line-color": "#315a60",
+        "line-opacity": 0.65,
+        "line-width": 2,
+      },
+    });
+    this.map.addLayer({
+      id: "orientation-current-location-dot",
+      type: "circle",
+      source: CURRENT_LOCATION_SOURCE,
+      paint: {
+        "circle-color": "#163f49",
+        "circle-radius": 6,
+        "circle-stroke-color": "#f7f4ed",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+
+  private renderCurrentLocation(): void {
+    if (this.status === "destroyed" || !this.map.getSource(CURRENT_LOCATION_SOURCE)) {
+      return;
+    }
+
+    const source = this.map.getSource(CURRENT_LOCATION_SOURCE) as GeoJSONSource | undefined;
+    if (!source || source.type !== "geojson") {
+      return;
+    }
+
+    const position = this.currentLocationController.current();
+    source.setData(position ? createLocationFeatureCollection(position) : EMPTY_FEATURE_COLLECTION);
+  }
+
+  private removeCurrentLocationLayers(): void {
+    if (this.map.getLayer("orientation-current-location-dot")) {
+      this.map.removeLayer("orientation-current-location-dot");
+    }
+    if (this.map.getLayer("orientation-current-location-accuracy-outline")) {
+      this.map.removeLayer("orientation-current-location-accuracy-outline");
+    }
+    if (this.map.getLayer("orientation-current-location-accuracy")) {
+      this.map.removeLayer("orientation-current-location-accuracy");
+    }
+    if (this.map.getSource(CURRENT_LOCATION_SOURCE)) {
+      this.map.removeSource(CURRENT_LOCATION_SOURCE);
+    }
+  }
+
   private assertUsable(): void {
     if (this.status === "destroyed") {
       throw new Error("Orientation map surface has been destroyed.");
@@ -158,4 +257,20 @@ export class OrientationMapSurface {
   private emitStatus(): void {
     this.callbacks.onStatusChanged?.({ status: this.status });
   }
+}
+
+function createLocationFeatureCollection(position: PositionFix) {
+  return {
+    type: "FeatureCollection" as const,
+    features: [
+      createAccuracyGeometry(position),
+      {
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [position.coordinate.longitude, position.coordinate.latitude],
+        },
+      },
+    ],
+  };
 }

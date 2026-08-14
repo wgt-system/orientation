@@ -18,6 +18,15 @@
         <div id="selection" class="selection" aria-live="polite">
           Select a spatial feature on the map.
         </div>
+        <div class="location-demo" aria-label="Current location demonstration">
+          <p class="location-demo-title">Current location demo</p>
+          <p id="location-status" class="location-status" aria-live="polite">No position supplied.</p>
+          <div class="location-controls">
+            <button id="set-location" type="button">Set sample position</button>
+            <button id="update-location" type="button">Update position</button>
+            <button id="clear-location" type="button">Clear position</button>
+          </div>
+        </div>
       </aside>
       <section id="map" class="map" aria-label="Orientation reference map"></section>
     </main>

@@ -12,12 +12,10 @@
 ### PositionFix
 
 - coordinate
-- accuracy in metres
-- observed-at timestamp
-- optional heading
-- optional speed
+- non-negative horizontal accuracy in metres
+- `observedAt` as a serialization-friendly UTC ISO timestamp
 
-PositionFix is ephemeral by default.
+PositionFix is validated, immutable when accepted by the map surface and ephemeral by default. Host acquisition and permission remain outside Orientation. Heading/speed are not part of this slice.
 
 ### SpatialFeatureRef
 
@@ -70,6 +68,8 @@ Conceptually contains:
 - generic map configuration.
 
 The scene is input/read state, not shared domain authority.
+
+Current Location is not a Spatial Feature and is supplied/cleared through an independent map-surface API. Replacing or clearing a Spatial Scene does not replace or clear the current PositionFix.
 
 ### RouteRequest / RouteResult
 
