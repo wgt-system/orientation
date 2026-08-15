@@ -1,6 +1,6 @@
 # Orientation – Acceptance Tests
 
-**Status:** Bootstrap baseline plus Issues #1–#4 map-surface acceptance evidence; v0.1.0 release approval remains a control-plane decision.
+**Status:** Orientation v0.1.0 published baseline; Issues #1–#4 acceptance evidence is recorded below.
 
 ## Architecture invariants
 
@@ -53,6 +53,12 @@ Reference/Embed browser evidence for 500 rendered markers, replacement, clearing
 reload, selection, rich actions, current location and antimeridian viewport behavior.
 Accuracy areas larger than 5,000 km or enclosing a pole are intentionally omitted
 from the display while the validated position point remains available.
+
+The v0.1.0 published baseline includes the provider-neutral Spatial Scene/Map
+Surface, Rich Spatial Feature Interaction, host-supplied Current Location,
+`orientation.host-bridge` 1.0, Reference Host, and embeddable browser/WebView
+Host. WGT Windows integration, physical-iPhone proof, Vocation migration,
+geocoding, Place Discovery, and Routing/Valhalla remain outside this release.
 
 ## Future integration gates
 
