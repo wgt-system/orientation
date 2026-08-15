@@ -49,6 +49,11 @@ not include reference/demo controls or provider data. Bridge protocol parsing
 and validation are separate from the browser event transport; WebView2,
 WKWebView and Avalonia/WGT adapters remain outside this repository.
 
+Both surfaces use OpenFreeMap Liberty as the default external street basemap.
+The Reference Host presents a small renderer error status when style/tile
+loading fails; the Embed Host continues to report generic `map.status` and
+`bridge.error` events without adding product-specific failure UI.
+
 Do not depend on React in the reusable renderer core.
 
 ### Routing

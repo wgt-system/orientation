@@ -23,6 +23,22 @@ if (!locationStatus || !setLocationButton || !updateLocationButton || !clearLoca
   throw new Error("Reference host location controls are incomplete.");
 }
 const locationStatusElement = locationStatus;
+const mapStatus = document.querySelector<HTMLElement>("#map-status");
+
+if (!mapStatus) {
+  throw new Error("Reference host map status element is incomplete.");
+}
+const mapStatusElement = mapStatus;
+
+function renderMapStatus(status: "initializing" | "ready" | "error" | "destroyed"): void {
+  if (status === "error") {
+    mapStatusElement.hidden = false;
+    mapStatusElement.textContent = "Map unavailable. The basemap style or tiles could not be loaded.";
+    return;
+  }
+  mapStatusElement.hidden = true;
+  mapStatusElement.textContent = "";
+}
 
 const scene: SpatialScene = {
   features: [
@@ -91,6 +107,7 @@ function renderSelection(event: SpatialFeatureSelectedEvent): void {
 
 const surface = new OrientationMapSurface(mapContainer, {
   onFeatureSelected: renderSelection,
+  onStatusChanged: ({ status }) => renderMapStatus(status),
 });
 
 surface.setScene(scene);

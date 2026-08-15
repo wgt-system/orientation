@@ -95,6 +95,12 @@ Controls:
 - fail visibly when required resources are unavailable;
 - do not treat remote styles as trusted application code.
 
+The v0.1.1 default style is OpenFreeMap Liberty, backed by external
+OpenStreetMap/OpenMapTiles resources. Requests are limited to the visible map
+viewport and contain no PositionFix data, analytics or telemetry. Availability
+is best-effort; a renderer error is surfaced rather than treated as trusted
+application state.
+
 ### Cross-context leakage
 
 Controls:

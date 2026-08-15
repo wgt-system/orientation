@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; four v0.1.0 implementation packages completed in the repository. Milestone/release approval remains pending.
+**Status:** Control-plane plan; v0.1.0 implementation packages and release are complete. The v0.1.1 basemap patch is active; its release approval remains pending.
 
 Milestone names, when created, use semantic versions only.
 
@@ -49,6 +49,15 @@ persistence, a broad network API, React/Avalonia/Vocation dependencies, or a new
 generic map microservice.
 
 Do not delete legacy Vocation/WGT renderers before replacement gates pass.
+
+## v0.1.1 — Basemap patch
+
+This patch replaces the MapLibre demonstration style with the default OpenFreeMap
+Liberty street basemap for the Reference and Embed Hosts. It keeps the accepted
+v0.1.0 Spatial Scene, Current Location, viewport and `orientation.host-bridge`
+1.0 semantics unchanged, and makes Reference Host basemap failures visible.
+Geocoding, Place Discovery, Routing/Valhalla and standalone UI redesign remain
+future work.
 
 ## v0.2.0 — Vocation geospatial migration
 

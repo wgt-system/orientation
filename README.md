@@ -64,4 +64,10 @@ embeddable browser/WebView Host.
 It does not include WGT Windows integration, physical-iPhone proof, Vocation
 migration, geocoding, Place Discovery, or Routing/Valhalla.
 
+The v0.1.1 basemap patch uses OpenFreeMap Liberty
+(`https://tiles.openfreemap.org/styles/liberty`) as the default MapLibre style.
+It provides OpenStreetMap/OpenMapTiles-based street and place detail without an
+API key. Remote basemap availability is external and best-effort; renderer and
+bridge semantics do not depend contractually on this provider.
+
 See [`docs/INDEX.md`](docs/INDEX.md).

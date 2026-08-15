@@ -33,6 +33,11 @@ Provider adapters implement those ports.
 
 The TypeScript map surface is a separate runtime artifact inside the same bounded context.
 
+The default reference/embed basemap is OpenFreeMap Liberty
+(`https://tiles.openfreemap.org/styles/liberty`), an external
+OpenStreetMap/OpenMapTiles-based style. Availability is best-effort and does not
+change the provider-neutral renderer or bridge contract.
+
 Conceptual boundary:
 
 ```text

@@ -60,6 +60,15 @@ Surface, Rich Spatial Feature Interaction, host-supplied Current Location,
 Host. WGT Windows integration, physical-iPhone proof, Vocation migration,
 geocoding, Place Discovery, and Routing/Valhalla remain outside this release.
 
+## v0.1.1 basemap patch
+
+The default basemap is OpenFreeMap Liberty
+(`https://tiles.openfreemap.org/styles/liberty`) with OpenStreetMap/OpenMapTiles
+data. Browser evidence covers visible street/place detail, attribution,
+Reference and Embed rendering, map failure status, and preservation of v0.1.0
+scene, bridge, rich interaction, current-location and viewport behavior.
+Remote basemap availability remains external/best-effort with no SLA promise.
+
 ## Future integration gates
 
 ### Vocation

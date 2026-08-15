@@ -17,6 +17,7 @@ import {
 
 const CURRENT_LOCATION_SOURCE = "orientation-current-location";
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] } as const;
+export const DEFAULT_BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 export type OrientationMapStatus = "initializing" | "ready" | "error" | "destroyed";
 
@@ -46,7 +47,7 @@ export class OrientationMapSurface {
     try {
       this.map = new Map({
         container,
-        style: "https://demotiles.maplibre.org/style.json",
+        style: DEFAULT_BASEMAP_STYLE_URL,
         center: [0, 0],
         zoom: 1.5,
       });
