@@ -16,8 +16,20 @@ import {
   CurrentLocationController,
   type PositionFix,
 } from "./current-location";
+import {
+  resolveRouteViewport,
+  RouteOverlayController,
+  type Route,
+  type RouteViewportIntent,
+  type ResolvedRouteViewport,
+} from "./route-overlay";
 
 const CURRENT_LOCATION_SOURCE = "orientation-current-location";
+const ROUTE_SOURCE = "orientation-route";
+const ROUTE_CASING_LAYER = "orientation-route-casing";
+const ROUTE_LINE_LAYER = "orientation-route-line";
+const ROUTE_ORIGIN_LAYER = "orientation-route-origin";
+const ROUTE_DESTINATION_LAYER = "orientation-route-destination";
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] } as const;
 const VECTOR_BASEMAP_SOURCE = "openmaptiles";
 export const BASEMAP_READINESS_TIMEOUT_MS = 15_000;
@@ -41,6 +53,7 @@ export type OrientationMapCallbacks = Readonly<{
 export class OrientationMapSurface {
   private readonly sceneController = new SpatialSceneController();
   private readonly currentLocationController = new CurrentLocationController();
+  private readonly routeController = new RouteOverlayController();
   private readonly callbacks: OrientationMapCallbacks;
   private readonly map: Map;
   private markers: Marker[] = [];
@@ -66,7 +79,9 @@ export class OrientationMapSurface {
       this.map.addControl(new NavigationControl(), "top-right");
       this.map.once("load", () => {
         if (this.status !== "destroyed") {
+          this.installRouteLayers();
           this.installCurrentLocationLayers();
+          this.renderRoute();
           this.renderCurrentLocation();
           this.waitForVectorBasemap();
         }
@@ -97,6 +112,24 @@ export class OrientationMapSurface {
       this.markers.push(this.createMarker(feature));
     }
     this.applyViewport(viewport);
+  }
+
+  setRoute(route: Route, viewport: RouteViewportIntent = { kind: "fit" }): void {
+    this.assertUsable();
+    const snapshot = this.routeController.set(route);
+    this.renderRoute();
+    this.applyRouteViewport(resolveRouteViewport(snapshot, viewport));
+  }
+
+  clearRoute(): void {
+    this.assertUsable();
+    this.routeController.clear();
+    this.renderRoute();
+  }
+
+  currentRoute(): Route | null {
+    this.assertUsable();
+    return this.routeController.current();
   }
 
   setCurrentPosition(position: PositionFix): void {
@@ -147,8 +180,10 @@ export class OrientationMapSurface {
 
     this.clearMarkers();
     this.sceneController.clear();
+    this.routeController.clear();
     this.currentLocationController.clear();
     this.removeCurrentLocationLayers();
+    this.removeRouteLayers();
     this.map.remove();
     this.setStatus("destroyed");
   }
@@ -180,15 +215,30 @@ export class OrientationMapSurface {
         });
         return;
       case "fit":
-        this.map.fitBounds(
-          [
-            [viewport.bounds.west, viewport.bounds.south],
-            [viewport.bounds.east, viewport.bounds.north],
-          ],
-          { padding: viewport.padding, maxZoom: viewport.maxZoom, duration: 0 },
-        );
+        this.fitBounds(viewport.bounds, viewport.padding, viewport.maxZoom);
         return;
     }
+  }
+
+  private applyRouteViewport(viewport: ResolvedRouteViewport): void {
+    if (viewport.kind === "preserve") {
+      return;
+    }
+    this.fitBounds(viewport.bounds, viewport.padding, viewport.maxZoom);
+  }
+
+  private fitBounds(
+    bounds: Readonly<{ west: number; south: number; east: number; north: number }>,
+    padding: number,
+    maxZoom: number,
+  ): void {
+    this.map.fitBounds(
+      [
+        [bounds.west, bounds.south],
+        [bounds.east, bounds.north],
+      ],
+      { padding, maxZoom, duration: 0 },
+    );
   }
 
   private clearMarkers(): void {
@@ -196,6 +246,94 @@ export class OrientationMapSurface {
       marker.remove();
     }
     this.markers = [];
+  }
+
+  private installRouteLayers(): void {
+    if (this.map.getSource(ROUTE_SOURCE)) {
+      return;
+    }
+
+    this.map.addSource(ROUTE_SOURCE, {
+      type: "geojson",
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+    this.map.addLayer({
+      id: ROUTE_CASING_LAYER,
+      type: "line",
+      source: ROUTE_SOURCE,
+      filter: ["==", ["get", "kind"], "route"],
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": "#f7f4ed",
+        "line-opacity": 0.92,
+        "line-width": 8,
+      },
+    });
+    this.map.addLayer({
+      id: ROUTE_LINE_LAYER,
+      type: "line",
+      source: ROUTE_SOURCE,
+      filter: ["==", ["get", "kind"], "route"],
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": "#c4513a",
+        "line-opacity": 0.96,
+        "line-width": 5,
+      },
+    });
+    this.map.addLayer({
+      id: ROUTE_ORIGIN_LAYER,
+      type: "circle",
+      source: ROUTE_SOURCE,
+      filter: ["==", ["get", "kind"], "origin"],
+      paint: {
+        "circle-color": "#163f49",
+        "circle-radius": 7,
+        "circle-stroke-color": "#f7f4ed",
+        "circle-stroke-width": 2,
+      },
+    });
+    this.map.addLayer({
+      id: ROUTE_DESTINATION_LAYER,
+      type: "circle",
+      source: ROUTE_SOURCE,
+      filter: ["==", ["get", "kind"], "destination"],
+      paint: {
+        "circle-color": "#a63f31",
+        "circle-radius": 7,
+        "circle-stroke-color": "#f7f4ed",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+
+  private renderRoute(): void {
+    if (this.status === "destroyed" || !this.map.getSource(ROUTE_SOURCE)) {
+      return;
+    }
+    const source = this.map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
+    if (!source || source.type !== "geojson") {
+      return;
+    }
+    const route = this.routeController.current();
+    source.setData(route ? createRouteFeatureCollection(route) : EMPTY_FEATURE_COLLECTION);
+  }
+
+  private removeRouteLayers(): void {
+    for (const layer of [ROUTE_DESTINATION_LAYER, ROUTE_ORIGIN_LAYER, ROUTE_LINE_LAYER, ROUTE_CASING_LAYER]) {
+      if (this.map.getLayer(layer)) {
+        this.map.removeLayer(layer);
+      }
+    }
+    if (this.map.getSource(ROUTE_SOURCE)) {
+      this.map.removeSource(ROUTE_SOURCE);
+    }
   }
 
   private installCurrentLocationLayers(): void {
@@ -318,6 +456,38 @@ export class OrientationMapSurface {
   private emitStatus(): void {
     this.callbacks.onStatusChanged?.({ status: this.status });
   }
+}
+
+function createRouteFeatureCollection(route: Route) {
+  return {
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        properties: { kind: "route" },
+        geometry: {
+          type: "LineString" as const,
+          coordinates: route.geometry.map((coordinate) => [coordinate.longitude, coordinate.latitude]),
+        },
+      },
+      {
+        type: "Feature" as const,
+        properties: { kind: "origin" },
+        geometry: {
+          type: "Point" as const,
+          coordinates: [route.origin.longitude, route.origin.latitude],
+        },
+      },
+      {
+        type: "Feature" as const,
+        properties: { kind: "destination" },
+        geometry: {
+          type: "Point" as const,
+          coordinates: [route.destination.longitude, route.destination.latitude],
+        },
+      },
+    ],
+  };
 }
 
 function createLocationFeatureCollection(position: PositionFix) {
