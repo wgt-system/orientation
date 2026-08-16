@@ -9,6 +9,7 @@ declare global {
       receive: (serializedMessage: string) => void;
       destroy: () => void;
     }>;
+    invokeCSharpAction?: (body: string) => void;
   }
 }
 
@@ -28,6 +29,9 @@ const bridge = new OrientationHostBridge(mapContainer, (serializedMessage) => {
     }));
     if (window.parent !== window) {
       window.parent.postMessage(serializedMessage, "*");
+    }
+    if (typeof window.invokeCSharpAction === "function") {
+      window.invokeCSharpAction(serializedMessage);
     }
   });
 }, { detailsContainer });
