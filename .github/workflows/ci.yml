@@ -40,3 +40,10 @@ jobs:
         run: npm ci
       - name: Test and build
         run: npm run check
+      - name: Upload map artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orientation-map-${{ github.sha }}
+          path: map/dist
+          if-no-files-found: error
+          retention-days: 14
