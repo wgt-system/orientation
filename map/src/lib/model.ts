@@ -276,6 +276,10 @@ function resolveMinimalLongitudeSpan(longitudes: readonly number[]): Readonly<{ 
     }
   }
 
+  if (largestGapIndex === sorted.length - 1) {
+    return { start: sorted[0]!, end: sorted[sorted.length - 1]! };
+  }
+
   const startIndex = (largestGapIndex + 1) % sorted.length;
   const start = sorted[startIndex]!;
   const end = start + (360 - largestGap);
