@@ -1,10 +1,12 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0 implementation packages and release are complete. The v0.1.1 basemap patch is active; its release approval remains pending.
+**Status:** Control-plane plan; v0.1.0 released; v0.1.1 released on 2026-08-16.
 
 Milestone names, when created, use semantic versions only.
 
-## v0.1.0 — Orientation map-surface foundation
+## v0.1.0
+
+Focus: Orientation map-surface foundation. Released.
 
 Goal: deliver the first reusable Orientation map-surface capability: a stable
 provider-neutral Spatial Scene boundary, rich spatial feature interaction,
@@ -31,8 +33,7 @@ therefore contains these four concrete work packages:
    validate inbound messages, cover lifecycle/reload, package the provider-neutral
    artifact, and complete browser/performance/regression/readiness checks.
 
-Issues #1, #2, #3 and #4 now have implementation and CI evidence on `dev`.
-This does not mark milestone `v0.1.0` released or approved.
+Issues #1, #2, #3 and #4 have implementation and CI evidence on `dev`.
 
 Dependency order:
 
@@ -50,16 +51,25 @@ generic map microservice.
 
 Do not delete legacy Vocation/WGT renderers before replacement gates pass.
 
-## v0.1.1 — Basemap patch
+## v0.1.1
+
+Focus: Basemap patch. Released on 2026-08-16.
 
 This patch replaces the MapLibre demonstration style with the default OpenFreeMap
 Liberty street basemap for the Reference and Embed Hosts. It keeps the accepted
 v0.1.0 Spatial Scene, Current Location, viewport and `orientation.host-bridge`
 1.0 semantics unchanged, and makes Reference Host basemap failures visible.
-Geocoding, Place Discovery, Routing/Valhalla and standalone UI redesign remain
-future work.
+The patch includes OpenFreeMap Liberty as the default basemap, real
+street/place rendering instead of the MapLibre demonstration style, visible
+attribution, Reference Host basemap/renderer failure status, and unchanged
+Embed Host bridge/status semantics. Geocoding, Place Discovery, Routing/
+Valhalla and standalone UI redesign remain future work.
 
-## v0.2.0 — Vocation geospatial migration
+`orientation.host-bridge` 1.0 and all schemas remain unchanged.
+
+## v0.2.0
+
+Focus: Vocation geospatial migration.
 
 Candidate scope after v0.1.0 review:
 
@@ -73,14 +83,18 @@ Candidate scope after v0.1.0 review:
 
 Vocation remains authoritative for Work Location/Precision and all job-market semantics.
 
-## v0.3.0 — WGT map migration
+## v0.3.0
+
+Focus: WGT map migration.
 
 - integrate Orientation map surface into WGT product map capability;
 - preserve WGT shell/navigation/platform ownership;
 - pass Windows and physical-iPhone gates;
 - retire Mapsui generic renderer once no accepted path requires it.
 
-## v0.4.0 — Navigate
+## v0.4.0
+
+Focus: Navigate.
 
 - Valhalla deployment/adapter;
 - generic route request/result;
@@ -89,7 +103,9 @@ Vocation remains authoritative for Work Location/Precision and all job-market se
 - current-location -> destination scenario;
 - failure/timeout/provider tests.
 
-## v0.5.0 — Discover
+## v0.5.0
+
+Focus: Discover.
 
 - provider decision for place/POI discovery and geocoding as needed;
 - place search/nearby;

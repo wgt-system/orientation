@@ -64,6 +64,11 @@ embeddable browser/WebView Host.
 It does not include WGT Windows integration, physical-iPhone proof, Vocation
 migration, geocoding, Place Discovery, or Routing/Valhalla.
 
+Orientation v0.1.1 is the released basemap patch baseline dated 2026-08-16.
+It replaces the demonstration style with a usable street/place basemap,
+preserves visible attribution, and makes Reference Host renderer/basemap
+failures visible. Embed bridge/status semantics remain unchanged.
+
 The v0.1.1 basemap patch uses OpenFreeMap Liberty
 (`https://tiles.openfreemap.org/styles/liberty`) as the default MapLibre style.
 It provides OpenStreetMap/OpenMapTiles-based street and place detail without an

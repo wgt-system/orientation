@@ -60,7 +60,9 @@ Surface, Rich Spatial Feature Interaction, host-supplied Current Location,
 Host. WGT Windows integration, physical-iPhone proof, Vocation migration,
 geocoding, Place Discovery, and Routing/Valhalla remain outside this release.
 
-## v0.1.1 basemap patch
+## v0.1.1
+
+Focus: basemap patch. Released and accepted on 2026-08-16.
 
 The default basemap is OpenFreeMap Liberty
 (`https://tiles.openfreemap.org/styles/liberty`) with OpenStreetMap/OpenMapTiles
