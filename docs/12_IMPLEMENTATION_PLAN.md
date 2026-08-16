@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0 released; v0.1.1 released on 2026-08-16; v0.1.2 runtime patch active.
+**Status:** Control-plane plan; v0.1.0, v0.1.1 and v0.1.2 released. v0.1.2 was released on 2026-08-16.
 
 Milestone names, when created, use semantic versions only.
 
@@ -69,14 +69,22 @@ Valhalla and standalone UI redesign remain future work.
 
 ## v0.1.2
 
-Focus: MapLibre GL JS 6 Vite worker runtime patch.
+Focus: MapLibre GL JS 6 Vite worker runtime patch. Released on 2026-08-16.
 
 Bundle and register the MapLibre worker explicitly with Vite so OpenFreeMap
-vector tiles render reliably in the Reference and Embed Hosts. Raster-only
+vector tiles render reliably in the Reference and Embed Hosts. The released
+behavior includes the explicit Vite worker asset, `setWorkerUrl(...)` before
+Map creation, an `openmaptiles`-loaded renderer readiness gate, and a
+15-second guard against silent worker/vector bootstrap failure. Raster-only
 relief can appear superficially valid while vector-tile processing is
 unavailable, so acceptance requires the `openmaptiles` source to reach its
 loaded state in both development and production-build browser runs. The
 OpenFreeMap Liberty selection and all v0.1.1 contracts remain unchanged.
+
+`orientation.host-bridge` 1.0, all schemas, Spatial Scene, Current Location,
+Viewport and Resource/Action semantics remain unchanged. Geocoding, Place
+Search/Discovery, Routing/Valhalla, standalone-app redesign, WGT integration
+and physical-iPhone evidence remain unimplemented.
 
 ## v0.2.0
 

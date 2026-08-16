@@ -73,14 +73,18 @@ Remote basemap availability remains external/best-effort with no SLA promise.
 
 ## v0.1.2
 
-Focus: MapLibre GL JS 6 Vite worker runtime patch.
+Focus: MapLibre GL JS 6 Vite worker runtime patch. Released and accepted on
+2026-08-16.
 
-The Reference and Embed browser checks must confirm that the `openmaptiles`
-vector source reaches `isSourceLoaded(...) === true`, alongside visible streets,
-road labels and city/place labels. Raster-only `ne2_shaded` relief is not
-sufficient evidence. Dev-server and production-build static-host checks also
-verify the bundled worker request and vector-tile requests without worker 404s
-or persistent vector-source failures.
+The released behavior explicitly bundles the worker as a Vite worker asset and
+sets `setWorkerUrl(...)` before Map creation. The Reference and Embed browser
+checks confirmed that the `openmaptiles` vector source reached
+`isSourceLoaded(...) === true`, alongside visible streets, road labels and
+city/place labels. Raster-only `ne2_shaded` relief was not accepted as evidence.
+Dev-server and production-build static-host checks verified the bundled worker
+request and vector-tile requests without worker 404s or persistent
+vector-source failures. The OpenFreeMap Liberty selection and v0.1.1 contracts
+remain unchanged.
 
 ## Future integration gates
 

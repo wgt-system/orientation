@@ -69,9 +69,11 @@ It replaces the demonstration style with a usable street/place basemap,
 preserves visible attribution, and makes Reference Host renderer/basemap
 failures visible. Embed bridge/status semantics remain unchanged.
 
-The v0.1.2 runtime patch explicitly bundles and registers the MapLibre GL JS 6
-worker for Vite. Acceptance therefore verifies that the OpenFreeMap vector
-source loads, rather than accepting raster-only relief as a valid map result.
+Orientation v0.1.2 is the released runtime patch dated 2026-08-16. It explicitly
+bundles and registers the MapLibre GL JS 6 worker for Vite; the `openmaptiles`
+vector source must load before renderer readiness, so raster-only relief is not
+accepted as a valid map result. The 15-second readiness guard makes silent
+worker/vector bootstrap failures diagnosable in Reference and Embed Hosts.
 
 The v0.1.1 basemap patch uses OpenFreeMap Liberty
 (`https://tiles.openfreemap.org/styles/liberty`) as the default MapLibre style.
