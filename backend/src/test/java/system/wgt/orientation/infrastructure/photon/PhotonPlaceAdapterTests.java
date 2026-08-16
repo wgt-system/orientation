@@ -6,6 +6,8 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import system.wgt.orientation.application.place.PlaceProviderException;
@@ -15,6 +17,7 @@ import system.wgt.orientation.domain.place.PlaceSearchQuery;
 import system.wgt.orientation.domain.place.ReverseGeocodeQuery;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +28,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class PhotonPlaceAdapterTests {
     private HttpServer server;
@@ -108,6 +113,26 @@ class PhotonPlaceAdapterTests {
     }
 
     @Test
+    void provesTheReaderConsumesAtMostMaxPlusOneBytes() throws IOException {
+        CountingInputStream atLimit = new CountingInputStream(new byte[PhotonPlaceAdapter.MAX_PROVIDER_RESPONSE_BYTES]);
+        ClientHttpResponse atLimitResponse = responseWithBody(atLimit, -1);
+        PhotonPlaceAdapter.readResponseBody(atLimitResponse);
+        assertEquals(PhotonPlaceAdapter.MAX_PROVIDER_RESPONSE_BYTES, atLimit.bytesRead);
+
+        CountingInputStream overLimit = new CountingInputStream(new byte[PhotonPlaceAdapter.MAX_PROVIDER_RESPONSE_BYTES + 2]);
+        ClientHttpResponse overLimitResponse = responseWithBody(overLimit, -1);
+        assertEquals(ProviderFailureKind.INVALID_RESPONSE, assertThrows(PlaceProviderException.class,
+                () -> PhotonPlaceAdapter.readResponseBody(overLimitResponse)).kind());
+        assertEquals(PhotonPlaceAdapter.MAX_PROVIDER_RESPONSE_BYTES + 1, overLimit.bytesRead);
+
+        CountingInputStream contentLengthRejected = new CountingInputStream(new byte[PhotonPlaceAdapter.MAX_PROVIDER_RESPONSE_BYTES + 2]);
+        ClientHttpResponse contentLengthResponse = responseWithBody(contentLengthRejected, PhotonPlaceAdapter.MAX_PROVIDER_RESPONSE_BYTES + 1L);
+        assertEquals(ProviderFailureKind.INVALID_RESPONSE, assertThrows(PlaceProviderException.class,
+                () -> PhotonPlaceAdapter.readResponseBody(contentLengthResponse)).kind());
+        assertEquals(0, contentLengthRejected.bytesRead);
+    }
+
+    @Test
     void rejectsMalformedGeometryAndProviderCoordinates() {
         response.set(new Response(200, "{\"type\":\"FeatureCollection\",\"features\":[{\"geometry\":{\"type\":\"LineString\"}}]}", 0));
         assertEquals(ProviderFailureKind.INVALID_RESPONSE, assertThrows(PlaceProviderException.class,
@@ -139,6 +164,52 @@ class PhotonPlaceAdapterTests {
     }
 
     private final AtomicReference<java.util.Map<String, String>> lastQuery = new AtomicReference<>();
+
+    private ClientHttpResponse responseWithBody(InputStream body, long contentLength) {
+        HttpHeaders headers = new HttpHeaders();
+        if (contentLength >= 0) {
+            headers.setContentLength(contentLength);
+        }
+        ClientHttpResponse response = mock(ClientHttpResponse.class);
+        when(response.getHeaders()).thenReturn(headers);
+        try {
+            when(response.getBody()).thenReturn(body);
+        } catch (IOException exception) {
+            throw new AssertionError(exception);
+        }
+        return response;
+    }
+
+    private static final class CountingInputStream extends InputStream {
+        private final byte[] content;
+        private int position;
+        private int bytesRead;
+
+        private CountingInputStream(byte[] content) {
+            this.content = content;
+        }
+
+        @Override
+        public int read(byte[] buffer, int offset, int length) {
+            if (position == content.length) {
+                return -1;
+            }
+            int amount = Math.min(length, content.length - position);
+            System.arraycopy(content, position, buffer, offset, amount);
+            position += amount;
+            bytesRead += amount;
+            return amount;
+        }
+
+        @Override
+        public int read() {
+            if (position == content.length) {
+                return -1;
+            }
+            bytesRead++;
+            return content[position++];
+        }
+    }
 
     private void respond(HttpExchange exchange) throws IOException {
         lastQuery.set(java.util.Arrays.stream(exchange.getRequestURI().getRawQuery().split("&"))

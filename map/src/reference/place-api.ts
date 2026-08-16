@@ -115,6 +115,8 @@ function isExtent(value: unknown): value is Place["extent"] {
   const east = extent.east;
   const north = extent.north;
   return [west, south, east, north].every((value) => typeof value === "number" && Number.isFinite(value))
+    && (west as number) >= -180 && (east as number) <= 180
+    && (south as number) >= -90 && (north as number) <= 90
     && (west as number) <= (east as number) && (south as number) <= (north as number);
 }
 

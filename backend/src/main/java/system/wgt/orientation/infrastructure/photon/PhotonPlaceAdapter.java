@@ -103,7 +103,7 @@ public class PhotonPlaceAdapter implements PlaceSearchPort, ReverseGeocodingPort
         }
     }
 
-    private String readResponseBody(ClientHttpResponse response) {
+    static String readResponseBody(ClientHttpResponse response) {
         long contentLength = response.getHeaders().getContentLength();
         if (contentLength > MAX_PROVIDER_RESPONSE_BYTES) {
             throw new PlaceProviderException(ProviderFailureKind.INVALID_RESPONSE, "Place provider response is too large.");
