@@ -16,6 +16,9 @@
 - **Place** — a provider-backed generic geographic place/POI result.
 - **Geocoding** — resolving textual place/address input to geographic candidates.
 - **Reverse Geocoding** — resolving a coordinate to provider-backed place/address candidates.
+- **Place Search Query** — bounded, explicit text input used to request ordered generic Place candidates.
+- **Forward Geocoding** — resolving text input to generic Place candidates; in v0.2.0 this is exposed as Place Search.
+- **Place Candidate** — an ordered generic result with coordinate, display label and optional address/category information.
 - **Route Request** — origin/destination/waypoints plus a generic travel profile and routing options.
 - **Route Result** — route geometry plus generic distance/duration and directions data.
 - **Travel Profile** — generic routing mode such as pedestrian, bicycle or car where supported.
@@ -25,3 +28,7 @@
 - **Provider Adapter** — Orientation infrastructure that translates a third-party geospatial API/engine into Orientation application semantics.
 - **Host** — a product or reference runtime embedding an Orientation capability.
 - **Opaque Provider Reference** — identifier Orientation can round-trip without interpreting foreign business semantics.
+
+Photon field names such as `osm_key` and `osm_value` are provider details, not
+Orientation language. The v0.2.0 adapter maps only normalized generic Place
+semantics across the application boundary.

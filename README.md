@@ -81,4 +81,14 @@ It provides OpenStreetMap/OpenMapTiles-based street and place detail without an
 API key. Remote basemap availability is external and best-effort; renderer and
 bridge semantics do not depend contractually on this provider.
 
+## v0.2.0
+
+Focus: Geocoding and place search.
+
+Orientation now owns the generic backend boundary for forward place search and
+reverse geocoding. The first provider adapter is Photon at the configurable
+development default `https://photon.komoot.io`; provider JSON does not escape
+the Orientation application/domain boundary. The first slice is stateless and
+does not change the `orientation.host-bridge` 1.0 map contract.
+
 See [`docs/INDEX.md`](docs/INDEX.md).

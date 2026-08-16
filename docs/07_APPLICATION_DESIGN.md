@@ -27,6 +27,22 @@ Application services express use cases and define ports for:
 - routing;
 - technical cache/index providers where later justified.
 
+The v0.2.0 backend slice adds `PlaceSearchPort` and
+`ReverseGeocodingPort`. `PlaceSearchService` and
+`ReverseGeocodingService` expose generic Place semantics while the Photon
+adapter remains infrastructure. The backend is stateless; Photon base URL and
+timeouts are trusted configuration.
+
+The narrow host API is:
+
+- `GET /api/v1/places/search?q=...&limit=...&lang=...` with optional explicit
+  `biasLat`, `biasLon` and `biasZoom`;
+- `GET /api/v1/places/reverse?lat=...&lon=...&lang=...`.
+
+Responses contain Orientation DTOs, never Photon GeoJSON or provider DTOs.
+Provider failures map to stable HTTP outcomes: invalid input `400`, rate limit
+`429`, unavailable/timeout `503`, invalid upstream response `502`.
+
 Provider adapters implement those ports.
 
 ## Map surface

@@ -88,11 +88,33 @@ and physical-iPhone evidence remain unimplemented.
 
 ## v0.2.0
 
-Focus: Vocation geospatial migration.
+Focus: Geocoding and place search.
 
-Candidate scope after v0.1.0 review:
+Orientation-owned generic place capability:
 
-- Orientation geocoding boundary/provider adapter;
+```text
+text query -> Orientation Place Search -> provider-backed Place candidates
+           -> coordinate/place information -> later map focus/presentation
+
+coordinate -> Orientation Reverse Geocoding -> generic Place result
+```
+
+Package #7 delivers the provider-neutral backend boundary, application use
+cases, Photon adapter and narrow HTTP endpoints. It remains stateless and does
+not modify the map UI. Package #8 is the later Reference Host integration and
+is intentionally not started here. Vocation migration is consumer work after
+this Orientation capability is reviewed.
+
+The default development/reference provider is the configurable external Photon
+endpoint `https://photon.komoot.io`; it is not part of Orientation semantics.
+
+Geocoding and place-search requests leave the local process only when explicitly
+submitted. PositionFix and current device location are not forwarded
+automatically. Routing/Valhalla, standalone product packaging and persistence
+remain later work.
+
+Future consumer work after v0.2.0 review:
+
 - Vocation adapter to Orientation geocoding;
 - Vocation rich Published Map Projection successor;
 - remove URL-free design as a permanent constraint;

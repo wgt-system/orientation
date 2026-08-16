@@ -86,6 +86,17 @@ request and vector-tile requests without worker 404s or persistent
 vector-source failures. The OpenFreeMap Liberty selection and v0.1.1 contracts
 remain unchanged.
 
+## v0.2.0
+
+Focus: Geocoding and place search.
+
+Package #7 acceptance covers deterministic domain/application validation,
+Photon adapter mapping and failure handling through a local HTTP stub, the
+Orientation-owned search/reverse HTTP endpoints, stateless operation, map
+regressions and a minimal live Photon smoke for `Hamburg Hauptbahnhof`,
+`Brandenburger Tor` and one reverse coordinate. Package #8 remains a separate
+open consumer/UI issue and is not implemented in this slice.
+
 ## Future integration gates
 
 ### Vocation

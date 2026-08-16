@@ -16,6 +16,11 @@ Expected future boundary families include:
 - map-scene / embedded-renderer boundary;
 - host interaction event boundary.
 
+The v0.2.0 HTTP API is a narrow Orientation-owned host boundary for the first
+place capability, not a foreign-domain Published Contract and not a revision of
+`orientation.host-bridge` 1.0. Its JSON responses contain generic Place DTOs;
+the Photon wire shape is kept behind the infrastructure adapter.
+
 ## Accepted host bridge
 
 `orientation.host-bridge` version `1.0` is the first concrete versioned

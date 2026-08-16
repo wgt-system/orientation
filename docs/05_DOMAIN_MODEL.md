@@ -9,6 +9,29 @@
 - longitude in `[-180, 180]`
 - latitude in `[-90, 90]`
 
+### Place
+
+A provider-backed generic geographic place result contains:
+
+- opaque provider reference;
+- deterministic display label;
+- validated Coordinate;
+- optional bounding extent;
+- optional normalized generic kind;
+- optional address components such as name, street, house number, postcode,
+  city, county, state, country and country code.
+
+Missing provider fields remain absent. Orientation does not define a universal
+postal-address ontology or claim that a reverse result proves building-level
+address accuracy.
+
+### PlaceSearchQuery and ReverseGeocodeQuery
+
+Place search trims nonblank text and uses a bounded result limit (default 5,
+hard maximum 10), optional language and explicit location bias. Reverse
+geocoding accepts a validated Coordinate and optional language. Neither query
+automatically includes PositionFix or current device location.
+
 ### PositionFix
 
 - coordinate

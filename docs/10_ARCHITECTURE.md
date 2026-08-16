@@ -56,6 +56,12 @@ loading fails; the Embed Host continues to report generic `map.status` and
 
 Do not depend on React in the reusable renderer core.
 
+The v0.2.0 Java slice adds a stateless Photon provider adapter behind
+application ports for place search and reverse geocoding. Photon is an
+external, configurable provider at `https://photon.komoot.io` by default; its
+availability is best-effort and its fields do not become Orientation domain
+types. No database or cache is introduced.
+
 ### Routing
 
 Valhalla is the selected upstream routing engine candidate/baseline. Orientation owns the adapter and generic routing semantics exposed to WGT-system consumers.

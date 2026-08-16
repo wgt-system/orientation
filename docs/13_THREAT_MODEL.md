@@ -57,6 +57,12 @@ Controls:
 - no secrets in logs/contracts;
 - explicit provider configuration.
 
+For v0.2.0, explicitly submitted search text and explicit reverse-geocoding
+coordinates are sent to the trusted configured Photon endpoint. PositionFix,
+current device location, identity and analytics identifiers are not forwarded
+automatically. Search input is bounded, provider URLs are not caller supplied,
+and full search text is not logged at INFO by default.
+
 ### SSRF
 
 If backend adapters accept configured URLs:
