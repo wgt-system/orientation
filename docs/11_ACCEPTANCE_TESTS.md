@@ -71,6 +71,17 @@ Reference and Embed rendering, map failure status, and preservation of v0.1.0
 scene, bridge, rich interaction, current-location and viewport behavior.
 Remote basemap availability remains external/best-effort with no SLA promise.
 
+## v0.1.2
+
+Focus: MapLibre GL JS 6 Vite worker runtime patch.
+
+The Reference and Embed browser checks must confirm that the `openmaptiles`
+vector source reaches `isSourceLoaded(...) === true`, alongside visible streets,
+road labels and city/place labels. Raster-only `ne2_shaded` relief is not
+sufficient evidence. Dev-server and production-build static-host checks also
+verify the bundled worker request and vector-tile requests without worker 404s
+or persistent vector-source failures.
+
 ## Future integration gates
 
 ### Vocation

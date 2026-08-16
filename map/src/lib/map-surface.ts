@@ -1,4 +1,5 @@
-import { Map, Marker, NavigationControl, type GeoJSONSource } from "maplibre-gl";
+import { Map, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource } from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import {
   resolveViewport,
   type ResolvedViewport,
@@ -17,7 +18,11 @@ import {
 
 const CURRENT_LOCATION_SOURCE = "orientation-current-location";
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] } as const;
+const VECTOR_BASEMAP_SOURCE = "openmaptiles";
+export const BASEMAP_READINESS_TIMEOUT_MS = 15_000;
 export const DEFAULT_BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+
+setWorkerUrl(workerUrl);
 
 export type OrientationMapStatus = "initializing" | "ready" | "error" | "destroyed";
 
@@ -39,6 +44,7 @@ export class OrientationMapSurface {
   private readonly map: Map;
   private markers: Marker[] = [];
   private status: OrientationMapStatus = "initializing";
+  private readinessTimer: number | undefined;
 
   constructor(container: HTMLElement, callbacks: OrientationMapCallbacks = {}) {
     this.callbacks = callbacks;
@@ -51,12 +57,17 @@ export class OrientationMapSurface {
         center: [0, 0],
         zoom: 1.5,
       });
+      this.readinessTimer = window.setTimeout(() => {
+        if (this.status === "initializing") {
+          this.setStatus("error");
+        }
+      }, BASEMAP_READINESS_TIMEOUT_MS);
       this.map.addControl(new NavigationControl(), "top-right");
       this.map.once("load", () => {
         if (this.status !== "destroyed") {
           this.installCurrentLocationLayers();
           this.renderCurrentLocation();
-          this.setStatus("ready");
+          this.waitForVectorBasemap();
         }
       });
       this.map.on("error", () => {
@@ -260,8 +271,41 @@ export class OrientationMapSurface {
     if (this.status === status) {
       return;
     }
+    if (status === "ready" || status === "error" || status === "destroyed") {
+      this.clearReadinessTimer();
+    }
     this.status = status;
     this.emitStatus();
+  }
+
+  private waitForVectorBasemap(): void {
+    const settle = (): void => {
+      if (this.status !== "initializing") {
+        return;
+      }
+      if (!this.map.isSourceLoaded(VECTOR_BASEMAP_SOURCE)) {
+        return;
+      }
+      this.map.off("sourcedata", settle);
+      this.map.off("idle", settle);
+      this.setStatus("ready");
+    };
+
+    if (this.map.isSourceLoaded(VECTOR_BASEMAP_SOURCE)) {
+      this.setStatus("ready");
+      return;
+    }
+
+    this.map.on("sourcedata", settle);
+    this.map.on("idle", settle);
+    settle();
+  }
+
+  private clearReadinessTimer(): void {
+    if (this.readinessTimer !== undefined) {
+      window.clearTimeout(this.readinessTimer);
+      this.readinessTimer = undefined;
+    }
   }
 
   private emitStatus(): void {

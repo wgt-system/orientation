@@ -69,6 +69,10 @@ It replaces the demonstration style with a usable street/place basemap,
 preserves visible attribution, and makes Reference Host renderer/basemap
 failures visible. Embed bridge/status semantics remain unchanged.
 
+The v0.1.2 runtime patch explicitly bundles and registers the MapLibre GL JS 6
+worker for Vite. Acceptance therefore verifies that the OpenFreeMap vector
+source loads, rather than accepting raster-only relief as a valid map result.
+
 The v0.1.1 basemap patch uses OpenFreeMap Liberty
 (`https://tiles.openfreemap.org/styles/liberty`) as the default MapLibre style.
 It provides OpenStreetMap/OpenMapTiles-based street and place detail without an
