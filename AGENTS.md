@@ -125,11 +125,13 @@ Canonical local path:
 
 `P:\wgt-system\orientation`
 
-## GitHub access note
+## Git/GitHub execution
 
-ChatGPT's GitHub connector for this project is useful for repository reads/reviews but write operations may return `403 Resource not accessible by integration`. Do not waste time repeatedly retrying connector writes.
+The system-wide agent execution and Git/GitHub authentication policy in `wgt-system/architecture/AGENTS.md` applies here.
 
-For repository creation, commits, branch pushes and other authorized writes, use the authenticated **local** `git` / GitHub CLI (`gh`) workflow from the local checkout. ChatGPT can review the pushed state through the GitHub connector afterward.
+Do not treat an isolated-sandbox credential failure as proof that the user's normal GitHub authentication is invalid, and do not start a re-login/device-flow/credential-manager change for that reason. Use supported direct control-plane GitHub writes where appropriate; for explicitly authorized local operations, use the existing authenticated normal-user `git`/`gh` session when the sandbox cannot access it.
+
+Do not repeat the system-wide policy in ordinary worker prompts.
 
 ## Definition of done for a worker slice
 
