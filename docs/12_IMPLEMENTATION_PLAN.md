@@ -100,10 +100,13 @@ coordinate -> Orientation Reverse Geocoding -> generic Place result
 ```
 
 Package #7 delivers the provider-neutral backend boundary, application use
-cases, Photon adapter and narrow HTTP endpoints. It remains stateless and does
-not modify the map UI. Package #8 is the later Reference Host integration and
-is intentionally not started here. Vocation migration is consumer work after
-this Orientation capability is reviewed.
+cases, Photon adapter and narrow HTTP endpoints. Package #8 integrates the
+Reference Host through relative `/api` calls, explicit-submit search and
+explicit map-center reverse lookup. It validates first-party DTOs, protects
+request lifecycle state, maps Places to generic Spatial Features, replaces the
+current Scene on selection and leaves the existing PositionFix flow untouched.
+Vocation migration is consumer work after this Orientation capability is
+reviewed.
 
 The default development/reference provider is the configurable external Photon
 endpoint `https://photon.komoot.io`; it is not part of Orientation semantics.

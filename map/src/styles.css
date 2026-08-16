@@ -77,6 +77,110 @@ h1 {
   backdrop-filter: blur(8px);
 }
 
+.place-search {
+  display: grid;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.place-search label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5f6f73;
+}
+
+.place-search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.place-search input,
+.place-search button,
+.reverse-lookup button {
+  min-height: 38px;
+  border: 1px solid rgb(33 62 67 / 20%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 72%);
+  color: #213e43;
+  font: inherit;
+}
+
+.place-search input {
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.place-search button,
+.reverse-lookup button {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.place-search input:focus-visible,
+.place-search button:focus-visible,
+.reverse-lookup button:focus-visible,
+.place-result:focus-visible {
+  border-color: #315a60;
+  outline: 3px solid rgb(49 90 96 / 18%);
+  outline-offset: 1px;
+}
+
+.place-search-status {
+  min-height: 1.2em;
+  margin: 0;
+  color: #536267;
+  font-size: 0.82rem;
+}
+
+.place-results {
+  display: grid;
+  gap: 0;
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.place-result {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 9px 2px;
+  border: 0;
+  border-top: 1px solid rgb(33 62 67 / 12%);
+  background: transparent;
+  color: #213e43;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-result:hover {
+  color: #315a60;
+  background: rgb(255 255 255 / 35%);
+}
+
+.place-result strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.place-result span {
+  color: #536267;
+  font-size: 0.78rem;
+}
+
+.reverse-lookup {
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+}
+
 .selection strong {
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.15rem;

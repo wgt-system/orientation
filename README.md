@@ -88,7 +88,11 @@ Focus: Geocoding and place search.
 Orientation now owns the generic backend boundary for forward place search and
 reverse geocoding. The first provider adapter is Photon at the configurable
 development default `https://photon.komoot.io`; provider JSON does not escape
-the Orientation application/domain boundary. The first slice is stateless and
-does not change the `orientation.host-bridge` 1.0 map contract.
+the Orientation application/domain boundary. The Reference Host now consumes
+only relative `/api` endpoints through Vite dev/preview proxying, with
+explicit-submit search and explicit map-center reverse lookup. Place results
+become generic Spatial Features in the current scene; PositionFix is not
+forwarded. The slice is stateless and does not change the
+`orientation.host-bridge` 1.0 map contract.
 
 See [`docs/INDEX.md`](docs/INDEX.md).

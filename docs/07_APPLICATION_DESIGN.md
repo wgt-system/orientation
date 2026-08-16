@@ -31,7 +31,11 @@ The v0.2.0 backend slice adds `PlaceSearchPort` and
 `ReverseGeocodingPort`. `PlaceSearchService` and
 `ReverseGeocodingService` expose generic Place semantics while the Photon
 adapter remains infrastructure. The backend is stateless; Photon base URL and
-timeouts are trusted configuration.
+timeouts are trusted configuration. The Reference Host consumes this API only
+through relative same-origin `/api` URLs; Vite dev and preview proxies target
+the local backend and are host configuration, not browser provider settings.
+Search is explicit-submit only. Reverse lookup is an explicit map-center
+action and exposes only the generic `Coordinate` value from the map surface.
 
 The narrow host API is:
 
@@ -44,6 +48,10 @@ Provider failures map to stable HTTP outcomes: invalid input `400`, rate limit
 `429`, unavailable/timeout `503`, invalid upstream response `502`.
 
 Provider adapters implement those ports.
+
+The Reference Host does not call Photon directly. It validates Orientation HTTP
+DTOs before mapping a result to a generic Spatial Feature, and uses a bounded
+AbortController/request sequence so stale responses cannot replace newer state.
 
 ## Map surface
 

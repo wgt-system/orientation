@@ -94,8 +94,13 @@ Package #7 acceptance covers deterministic domain/application validation,
 Photon adapter mapping and failure handling through a local HTTP stub, the
 Orientation-owned search/reverse HTTP endpoints, stateless operation, map
 regressions and a minimal live Photon smoke for `Hamburg Hauptbahnhof`,
-`Brandenburger Tor` and one reverse coordinate. Package #8 remains a separate
-open consumer/UI issue and is not implemented in this slice.
+`Brandenburger Tor` and one reverse coordinate.
+
+Package #8 adds the Reference Host consumer boundary: validated relative API
+DTOs, explicit-submit search, explicit map-center reverse lookup, stale-request
+protection, current-scene replacement, immediate details and marker focus.
+The browser never calls Photon directly, PositionFix is not forwarded, and the
+host bridge remains `orientation.host-bridge` 1.0.
 
 ## Future integration gates
 

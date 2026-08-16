@@ -8,6 +8,7 @@ import {
   type SpatialFeatureSelectedEvent,
   type SpatialResourceActivatedEvent,
   type SpatialScene,
+  type Coordinate,
 } from "./model";
 import { SpatialSceneController } from "./scene-controller";
 import {
@@ -112,6 +113,12 @@ export class OrientationMapSurface {
 
   currentPosition(): PositionFix | null {
     return this.currentLocationController.current();
+  }
+
+  centerCoordinate(): Coordinate {
+    this.assertUsable();
+    const center = this.map.getCenter();
+    return { longitude: center.lng, latitude: center.lat };
   }
 
   feature(featureRef: string, sourceRef: string): SpatialFeature | undefined {

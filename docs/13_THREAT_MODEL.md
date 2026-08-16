@@ -63,6 +63,13 @@ current device location, identity and analytics identifiers are not forwarded
 automatically. Search input is bounded, provider URLs are not caller supplied,
 and full search text is not logged at INFO by default.
 
+The Reference Host uses only relative Orientation API URLs. Vite's local dev
+and preview proxy are configuration for the development host; no Photon URL or
+provider secret is exposed through `VITE_*` browser configuration. Search is
+explicit-submit only, and reverse geocoding sends only the explicitly chosen
+map-center Coordinate. A PositionFix is never used as a search bias or reverse
+request.
+
 ### SSRF
 
 If backend adapters accept configured URLs:

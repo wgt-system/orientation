@@ -60,7 +60,11 @@ The v0.2.0 Java slice adds a stateless Photon provider adapter behind
 application ports for place search and reverse geocoding. Photon is an
 external, configurable provider at `https://photon.komoot.io` by default; its
 availability is best-effort and its fields do not become Orientation domain
-types. No database or cache is introduced.
+types. The Reference Host calls only `/api/v1/places/search` and
+`/api/v1/places/reverse`; Vite dev/preview proxying to the local backend keeps
+the browser same-origin and does not expose Photon configuration. Search is
+explicit-submit only, and reverse lookup is an explicit map-center action.
+No database or cache is introduced.
 
 ### Routing
 
