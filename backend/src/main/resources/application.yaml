@@ -10,3 +10,10 @@ management:
 
 server:
   shutdown: graceful
+
+orientation:
+  photon:
+    base-url: https://photon.komoot.io
+    connect-timeout: 3s
+    read-timeout: 5s
+    user-agent: wgt-system-orientation/0.2.0
