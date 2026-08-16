@@ -122,6 +122,24 @@ migration is included. OpenFreeMap Liberty, MapLibre 6 worker/vector readiness,
 current-location visualization, `orientation.host-bridge` 1.0 and all schemas
 remain unchanged.
 
+## v0.3.0 — Issue #9
+
+Focus: Routing. v0.3.0 is route planning/routing, not full live navigation.
+
+Issue #9 acceptance requires deterministic validation of the three generic
+Travel Profiles, two-point Route Requests, immutable bounded Route Geometry
+(2–10,000 Coordinates), and finite non-negative Route distance/duration.
+`RoutingService` must return a fake-port Route and preserve the distinct
+no-route, unavailable, timeout and invalid-provider-response outcomes.
+
+`POST /api/v1/routes` must accept only Orientation DTOs, validate coordinates
+and profile, return an Orientation Route envelope with decoded geometry, and
+map failures to `400` invalid input, `404` no route, `502` invalid provider
+response, `503` unavailable/timeout and `429` rate limiting. No provider JSON,
+Valhalla term, encoded polyline, PositionFix, persistence or network request is
+allowed in this slice. Existing Place Search and Reverse Geocoding behavior,
+`orientation.host-bridge` 1.0 and all schemas remain unchanged.
+
 ## Future integration gates
 
 ### Vocation

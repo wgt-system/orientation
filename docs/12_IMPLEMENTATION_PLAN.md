@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2 and v0.2.0 released. v0.2.0 was released on 2026-08-16.
+**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2 and v0.2.0 released. v0.2.0 was released on 2026-08-16. v0.3.0 is the current routing milestone.
 
 Milestone names, when created, use semantic versions only.
 
@@ -143,32 +143,42 @@ Vocation remains authoritative for Work Location/Precision and all job-market se
 
 ## v0.3.0
 
-Focus: WGT map migration.
+Focus: Routing.
 
-- integrate Orientation map surface into WGT product map capability;
-- preserve WGT shell/navigation/platform ownership;
-- pass Windows and physical-iPhone gates;
-- retire Mapsui generic renderer once no accepted path requires it.
+This is the current concrete Orientation milestone. It is route
+planning/routing, not full live navigation. The four work packages are:
 
-## v0.4.0
+1. **#9 — Define generic routing model and HTTP boundary**: two-point
+   `RouteRequest`, generic `TravelProfile`, `Route`, bounded decoded
+   `RouteGeometry`, `RoutingPort`, `RoutingService`, stable failures and
+   `POST /api/v1/routes`, proven with deterministic fake-port tests. This
+   package is implemented in the current slice.
+2. **#10 — Integrate Valhalla routing provider**: first adapter, reviewed
+   runtime/dataset, provider mapping, timeout/error handling and local smoke.
+3. **#11 — Render generic routes on the Orientation map surface**: route
+   overlay lifecycle, start/end, viewport fit and deterministic fixture tests.
+4. **#12 — Integrate route planning into the Orientation Reference Host**:
+   explicit endpoints/profile, API call, route rendering and loading/error
+   states while preserving place/reverse behavior.
 
-Focus: Navigate.
+Dependency graph:
 
-- Valhalla deployment/adapter;
-- generic route request/result;
-- route overlay;
-- distance/duration;
-- current-location -> destination scenario;
-- failure/timeout/provider tests.
+```text
+#9
+├── #10
+└── #11
+     \
+      #10 + #11 -> #12
+```
 
-## v0.5.0
+Not included in v0.3.0: turn-by-turn navigation, live GPS rerouting,
+PositionFix forwarding, foreign-domain migration, WGT product integration,
+route UI in #9, route rendering, Valhalla runtime/adapter work in #9 or
+persistence.
 
-Focus: Discover.
-
-- provider decision for place/POI discovery and geocoding as needed;
-- place search/nearby;
-- reverse geocoding;
-- provider attribution/rate/caching behavior.
+Future work is intentionally unversioned until this milestone is reviewed:
+consumer integration gates, standalone packaging and other provider/domain
+migrations.
 
 ## Sequencing rule
 

@@ -19,9 +19,12 @@
 - **Place Search Query** — bounded, explicit text input used to request ordered generic Place candidates.
 - **Forward Geocoding** — resolving text input to generic Place candidates; in v0.2.0 this is exposed as Place Search.
 - **Place Candidate** — an ordered generic result with coordinate, display label and optional address/category information.
-- **Route Request** — origin/destination/waypoints plus a generic travel profile and routing options.
-- **Route Result** — route geometry plus generic distance/duration and directions data.
-- **Travel Profile** — generic routing mode such as pedestrian, bicycle or car where supported.
+- **Route Request** — an explicitly supplied origin, destination and generic Travel Profile for two-point routing; it has no implicit current-position input.
+- **Route** — provider-neutral route output containing origin, destination, profile, bounded decoded Route Geometry, distance in metres and duration in seconds.
+- **Route Geometry** — an immutable ordered list of at least two validated Coordinates, bounded to 10,000 points in the initial routing slice.
+- **Travel Profile** — one of the generic Orientation modes `DRIVING`, `CYCLING` or `WALKING`; provider-specific costing names are not domain language.
+- **Routing Port** — application boundary translating a Route Request to a provider-neutral Route or stable routing failure.
+- **No Route Found** — a valid routing outcome distinct from provider unavailability or invalid provider data.
 - **Map Surface** — reusable renderer runtime owned by Orientation.
 - **Map Surface Lifecycle** — initializing, ready, error and destroyed states of a renderer instance; lifecycle events remain generic and do not expose MapLibre or DOM event objects.
 - **Reference Host** — standalone development/debug UI for Orientation; not the WGT product UI.

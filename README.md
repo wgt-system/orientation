@@ -107,3 +107,17 @@ Vocation/WGT migration or standalone-product packaging. The
 `orientation.host-bridge` 1.0 contract and schemas are unchanged.
 
 See [`docs/INDEX.md`](docs/INDEX.md).
+
+## v0.3.0
+
+Focus: Routing.
+
+The next Orientation milestone defines the provider-neutral routing boundary:
+two-point `RouteRequest` semantics, generic travel profiles, decoded bounded
+route geometry, distance/duration, a `RoutingPort`, `RoutingService` and the
+narrow `POST /api/v1/routes` host endpoint. Issue #9 deliberately contains no
+Valhalla implementation, external routing request, map route rendering or
+Reference Host route workflow. Those are separate work packages (#10–#12).
+
+v0.3.0 is route planning/routing, not full live navigation. It does not add
+turn-by-turn navigation, live GPS rerouting, persistence or WGT integration.
