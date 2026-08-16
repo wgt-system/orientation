@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0, v0.1.1 and v0.1.2 released. v0.1.2 was released on 2026-08-16.
+**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2 and v0.2.0 released. v0.2.0 was released on 2026-08-16.
 
 Milestone names, when created, use semantic versions only.
 
@@ -90,6 +90,8 @@ and physical-iPhone evidence remain unimplemented.
 
 Focus: Geocoding and place search.
 
+Released and accepted on 2026-08-16.
+
 Orientation-owned generic place capability:
 
 ```text
@@ -99,14 +101,26 @@ text query -> Orientation Place Search -> provider-backed Place candidates
 coordinate -> Orientation Reverse Geocoding -> generic Place result
 ```
 
-Package #7 delivers the provider-neutral backend boundary, application use
-cases, Photon adapter and narrow HTTP endpoints. Package #8 integrates the
-Reference Host through relative `/api` calls, explicit-submit search and
-explicit map-center reverse lookup. It validates first-party DTOs, protects
-request lifecycle state, maps Places to generic Spatial Features, replaces the
-current Scene on selection and leaves the existing PositionFix flow untouched.
-Vocation migration is consumer work after this Orientation capability is
-reviewed.
+Package #7 delivered the provider-neutral backend boundary, application use
+cases, Photon adapter and narrow HTTP endpoints. Package #8 delivered the
+Reference Host integration through relative `/api` calls, explicit-submit
+search and explicit map-center reverse lookup. It validates first-party DTOs,
+protects request lifecycle state, maps Places to generic Spatial Features,
+replaces the current Scene on selection and leaves the existing PositionFix
+flow untouched.
+
+Final released scope includes the Orientation Place model, forward search,
+reverse geocoding, configurable Photon infrastructure, stable provider error
+mapping, stateless operation, a 1 MiB provider response bound with at most
+`MAX + 1` bytes consumed for unknown-length oversize detection, and canonical
+Photon extent normalization. The browser never calls Photon directly. Jackson
+3/Spring Boot 4.1, OpenFreeMap Liberty, MapLibre 6 worker/vector readiness,
+current-location behavior, `orientation.host-bridge` 1.0 and schemas remain
+unchanged.
+
+Not included in v0.2.0: routing/Valhalla, persistence/database, automatic
+device-location forwarding, Vocation/WGT migration or standalone-product
+packaging. Vocation migration remains consumer work after this release.
 
 The default development/reference provider is the configurable external Photon
 endpoint `https://photon.komoot.io`; it is not part of Orientation semantics.

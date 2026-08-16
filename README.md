@@ -85,14 +85,25 @@ bridge semantics do not depend contractually on this provider.
 
 Focus: Geocoding and place search.
 
-Orientation now owns the generic backend boundary for forward place search and
-reverse geocoding. The first provider adapter is Photon at the configurable
-development default `https://photon.komoot.io`; provider JSON does not escape
-the Orientation application/domain boundary. The Reference Host now consumes
-only relative `/api` endpoints through Vite dev/preview proxying, with
-explicit-submit search and explicit map-center reverse lookup. Place results
-become generic Spatial Features in the current scene; PositionFix is not
-forwarded. The slice is stateless and does not change the
-`orientation.host-bridge` 1.0 map contract.
+Released and accepted on 2026-08-16.
+
+The release adds the Orientation-owned Place model, forward place search,
+reverse geocoding, provider-neutral application ports, the configurable Photon
+infrastructure adapter, bounded provider responses, stable provider error
+mapping and stateless HTTP endpoints:
+
+- `GET /api/v1/places/search`
+- `GET /api/v1/places/reverse`
+
+Photon is replaceable backend infrastructure. Jackson 3 is used through the
+Spring Boot 4.1 stack; no Jackson-2 Photon parser or raw Photon taxonomy leaks
+into Orientation semantics. Provider responses are limited to 1 MiB, with
+unknown-length bodies consuming at most one additional byte for oversize
+detection. The Reference Host uses only relative `/api` calls through the Vite
+dev/preview proxy, supports explicit-submit keyboard-accessible search and
+explicit map-center reverse lookup, and never forwards PositionFix
+automatically. The release does not include routing, Valhalla, persistence,
+Vocation/WGT migration or standalone-product packaging. The
+`orientation.host-bridge` 1.0 contract and schemas are unchanged.
 
 See [`docs/INDEX.md`](docs/INDEX.md).

@@ -90,6 +90,8 @@ remain unchanged.
 
 Focus: Geocoding and place search.
 
+Released and accepted on 2026-08-16.
+
 Package #7 acceptance covers deterministic domain/application validation,
 Photon adapter mapping and failure handling through a local HTTP stub, the
 Orientation-owned search/reverse HTTP endpoints, stateless operation, map
@@ -101,6 +103,24 @@ DTOs, explicit-submit search, explicit map-center reverse lookup, stale-request
 protection, current-scene replacement, immediate details and marker focus.
 The browser never calls Photon directly, PositionFix is not forwarded, and the
 host bridge remains `orientation.host-bridge` 1.0.
+
+The released backend scope is the Orientation-owned Place model, forward place
+search, reverse geocoding, provider-neutral ports, configurable Photon
+infrastructure, provider error mapping and bounded response handling. Spring
+Boot 4.1 uses Jackson 3; raw Photon `type` is not exposed as `Place.kind`,
+Photon extents are normalized into Orientation BoundingBox ordering, and
+unknown-length provider bodies read at most `MAX + 1` bytes after a 1 MiB hard
+limit. The browser/backend boundary is relative Orientation `/api` traffic
+only; Vite dev/preview proxying targets the backend and no permissive CORS
+workaround is used.
+
+The Reference Host release includes explicit-submit search, result-list
+selection, immediate details, map focus, current-scene marker reselection and
+an explicit `Identify map center` reverse action. No automatic reverse lookup,
+autocomplete, PositionFix forwarding, routing, persistence or foreign-domain
+migration is included. OpenFreeMap Liberty, MapLibre 6 worker/vector readiness,
+current-location visualization, `orientation.host-bridge` 1.0 and all schemas
+remain unchanged.
 
 ## Future integration gates
 
