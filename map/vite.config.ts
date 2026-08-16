@@ -17,7 +17,7 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       input: {
         reference: "index.html",
