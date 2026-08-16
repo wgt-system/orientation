@@ -1,11 +1,11 @@
 package system.wgt.orientation.infrastructure.photon;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.core.io.buffer.DataBufferLimitException;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import system.wgt.orientation.application.place.PlaceProviderException;
 import system.wgt.orientation.application.place.PlaceSearchPort;
 import system.wgt.orientation.application.place.ProviderFailureKind;
@@ -17,7 +17,9 @@ import system.wgt.orientation.domain.place.Place;
 import system.wgt.orientation.domain.place.PlaceSearchQuery;
 import system.wgt.orientation.domain.place.ReverseGeocodeQuery;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +28,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class PhotonPlaceAdapter implements PlaceSearchPort, ReverseGeocodingPort {
+    static final int MAX_PROVIDER_RESPONSE_BYTES = 1_048_576;
+
     private final RestClient client;
     private final ObjectMapper objectMapper;
 
@@ -70,9 +74,7 @@ public class PhotonPlaceAdapter implements PlaceSearchPort, ReverseGeocodingPort
                     })
                     .exchange((request, response) -> {
                         int status = response.getStatusCode().value();
-                        String body = response.getBody() == null
-                                ? ""
-                                : new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                        String body = readResponseBody(response);
                         if (status == 429) {
                             throw new PlaceProviderException(ProviderFailureKind.RATE_LIMITED, "Place provider rate limit reached.");
                         }
@@ -84,7 +86,7 @@ public class PhotonPlaceAdapter implements PlaceSearchPort, ReverseGeocodingPort
                         }
                         try {
                             return objectMapper.readTree(body);
-                        } catch (IOException exception) {
+                        } catch (RuntimeException exception) {
                             throw new PlaceProviderException(ProviderFailureKind.INVALID_RESPONSE, "Place provider response is invalid.", exception);
                         }
                     });
@@ -96,10 +98,42 @@ public class PhotonPlaceAdapter implements PlaceSearchPort, ReverseGeocodingPort
                     ? ProviderFailureKind.TIMEOUT
                     : ProviderFailureKind.UNAVAILABLE;
             throw new PlaceProviderException(kind, "Place provider request failed.", exception);
-        } catch (DataBufferLimitException exception) {
-            throw new PlaceProviderException(ProviderFailureKind.INVALID_RESPONSE, "Place provider response is too large.", exception);
         } catch (RestClientException exception) {
             throw new PlaceProviderException(ProviderFailureKind.UNAVAILABLE, "Place provider request failed.", exception);
+        }
+    }
+
+    private String readResponseBody(ClientHttpResponse response) {
+        long contentLength = response.getHeaders().getContentLength();
+        if (contentLength > MAX_PROVIDER_RESPONSE_BYTES) {
+            throw new PlaceProviderException(ProviderFailureKind.INVALID_RESPONSE, "Place provider response is too large.");
+        }
+        InputStream body;
+        try {
+            body = response.getBody();
+        } catch (IOException exception) {
+            throw new RestClientException("Could not read place provider response.", exception);
+        }
+        if (body == null) {
+            return "";
+        }
+        byte[] buffer = new byte[8192];
+        ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(
+                contentLength > 0 ? (int) contentLength : 8192,
+                MAX_PROVIDER_RESPONSE_BYTES));
+        int total = 0;
+        try {
+            int read;
+            while ((read = body.read(buffer)) != -1) {
+                total += read;
+                if (total > MAX_PROVIDER_RESPONSE_BYTES) {
+                    throw new PlaceProviderException(ProviderFailureKind.INVALID_RESPONSE, "Place provider response is too large.");
+                }
+                output.write(buffer, 0, read);
+            }
+            return output.toString(StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new RestClientException("Could not read place provider response.", exception);
         }
     }
 
@@ -138,8 +172,7 @@ public class PhotonPlaceAdapter implements PlaceSearchPort, ReverseGeocodingPort
                 .or(() -> address.country())
                 .orElseThrow(() -> invalid("Place provider returned a place without a display label."));
 
-        return new Place(providerReference, label, coordinate, extent(properties),
-                firstText(properties, "type"), address);
+        return new Place(providerReference, label, coordinate, extent(properties), Optional.empty(), address);
     }
 
     private String providerReference(JsonNode feature, JsonNode properties) {
@@ -163,12 +196,15 @@ public class PhotonPlaceAdapter implements PlaceSearchPort, ReverseGeocodingPort
         if (value.isMissingNode() || value.isNull()) {
             return Optional.empty();
         }
-        if (!value.isArray() || value.size() != 4 || !value.elements().hasNext()) {
+        if (!value.isArray() || value.size() != 4
+                || !value.get(0).isNumber() || !value.get(1).isNumber()
+                || !value.get(2).isNumber() || !value.get(3).isNumber()) {
             throw invalid("Place provider returned an invalid extent.");
         }
         try {
-            return Optional.of(new BoundingBox(value.get(0).doubleValue(), value.get(1).doubleValue(),
-                    value.get(2).doubleValue(), value.get(3).doubleValue()));
+            // Photon encodes extents as [west, north, east, south].
+            return Optional.of(new BoundingBox(value.get(0).doubleValue(), value.get(3).doubleValue(),
+                    value.get(2).doubleValue(), value.get(1).doubleValue()));
         } catch (IllegalArgumentException exception) {
             throw new PlaceProviderException(ProviderFailureKind.INVALID_RESPONSE, "Place provider returned an invalid extent.", exception);
         }

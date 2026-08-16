@@ -1,6 +1,6 @@
 package system.wgt.orientation.infrastructure.photon;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -62,6 +62,7 @@ class PhotonPlaceAdapterTests {
         assertEquals("Hamburg Hauptbahnhof", places.get(0).displayLabel());
         assertEquals(9.99, places.get(0).coordinate().longitude());
         assertEquals(53.55, places.get(0).coordinate().latitude());
+        assertEquals(Optional.empty(), places.get(0).kind());
         assertEquals("Hamburg Hauptbahnhof", lastQuery.get().get("q"));
         assertEquals("5", lastQuery.get().get("limit"));
         assertEquals("de", lastQuery.get().get("lang"));
@@ -94,6 +95,14 @@ class PhotonPlaceAdapterTests {
                 () -> adapter.search(new PlaceSearchQuery("x", 5, Optional.empty(), Optional.empty()))).kind());
 
         response.set(new Response(200, "not-json", 0));
+        assertEquals(ProviderFailureKind.INVALID_RESPONSE, assertThrows(PlaceProviderException.class,
+                () -> adapter.search(new PlaceSearchQuery("x", 5, Optional.empty(), Optional.empty()))).kind());
+    }
+
+    @Test
+    void rejectsResponsesOverTheProviderBound() {
+        response.set(new Response(200, "{" + "\"type\":\"FeatureCollection\",\"features\":[" + "x".repeat(PhotonPlaceAdapter.MAX_PROVIDER_RESPONSE_BYTES) + "]}", 0));
+
         assertEquals(ProviderFailureKind.INVALID_RESPONSE, assertThrows(PlaceProviderException.class,
                 () -> adapter.search(new PlaceSearchQuery("x", 5, Optional.empty(), Optional.empty()))).kind());
     }
@@ -152,7 +161,7 @@ class PhotonPlaceAdapterTests {
     }
 
     private String fixture() {
-        return "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"id\":\"fallback\",\"properties\":{\"osm_type\":\"N\",\"osm_id\":123,\"name\":\"Hamburg Hauptbahnhof\",\"street\":\"Hauptbahnhof\",\"housenumber\":\"1\",\"postcode\":\"20095\",\"city\":\"Hamburg\",\"country\":\"Germany\",\"countrycode\":\"DE\",\"type\":\"house\",\"extent\":[9.98,53.54,10.0,53.56]},\"geometry\":{\"type\":\"Point\",\"coordinates\":[9.99,53.55]}}]}";
+        return "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"id\":\"fallback\",\"properties\":{\"osm_type\":\"N\",\"osm_id\":123,\"name\":\"Hamburg Hauptbahnhof\",\"street\":\"Hauptbahnhof\",\"housenumber\":\"1\",\"postcode\":\"20095\",\"city\":\"Hamburg\",\"country\":\"Germany\",\"countrycode\":\"DE\",\"type\":\"house\",\"extent\":[9.98,53.56,10.0,53.54]},\"geometry\":{\"type\":\"Point\",\"coordinates\":[9.99,53.55]}}]}";
     }
 
     private record Response(int status, String body, long delayMillis) {
