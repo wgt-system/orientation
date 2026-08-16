@@ -91,7 +91,7 @@ public class ValhallaRoutingAdapter implements RoutingPort {
         };
     }
 
-    private JsonNode handleResponse(ClientHttpResponse response) {
+    private JsonNode handleResponse(ClientHttpResponse response) throws IOException {
         int status = response.getStatusCode().value();
         String body = readResponseBody(response);
         if (status == 429) {
