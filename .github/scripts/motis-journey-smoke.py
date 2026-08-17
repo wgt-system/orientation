@@ -11,6 +11,14 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 
+AACHEN_FIXTURE_BOUNDS = {
+    "south": 50.6,
+    "north": 50.9,
+    "west": 5.9,
+    "east": 6.3,
+}
+
+
 def rows(archive: zipfile.ZipFile, name: str):
     try:
         raw = archive.read(name)
@@ -32,6 +40,18 @@ def parse_gtfs_time(value: str) -> timedelta:
     if hours < 0 or minutes not in range(60) or seconds not in range(60):
         raise ValueError(f"Invalid GTFS time: {value}")
     return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+
+def inside_aachen_fixture(stop: dict[str, str]) -> bool:
+    try:
+        latitude = float(stop["stop_lat"])
+        longitude = float(stop["stop_lon"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    return (
+        AACHEN_FIXTURE_BOUNDS["south"] <= latitude <= AACHEN_FIXTURE_BOUNDS["north"]
+        and AACHEN_FIXTURE_BOUNDS["west"] <= longitude <= AACHEN_FIXTURE_BOUNDS["east"]
+    )
 
 
 def active_date_by_service(archive: zipfile.ZipFile, service_ids: set[str]):
@@ -112,7 +132,13 @@ def prepare(gtfs_zip: str, request_path: str, metadata_path: str):
                 continue
             stop_times = stop_times_by_trip.get(trip_id, [])
             stop_times.sort(key=lambda row: int(row.get("stop_sequence", "0")))
-            usable = [row for row in stop_times if row.get("stop_id") in stops and (row.get("departure_time") or row.get("arrival_time"))]
+            usable = [
+                row
+                for row in stop_times
+                if row.get("stop_id") in stops
+                and inside_aachen_fixture(stops[row["stop_id"]])
+                and (row.get("departure_time") or row.get("arrival_time"))
+            ]
             if len(usable) < 2:
                 continue
             first = usable[0]
@@ -121,13 +147,13 @@ def prepare(gtfs_zip: str, request_path: str, metadata_path: str):
             last_time = last.get("arrival_time") or last.get("departure_time")
             if not first_time or not last_time:
                 continue
-            if parse_gtfs_time(last_time) <= parse_gtfs_time(first_time):
+            if parse_gtfs_time(last_time) - parse_gtfs_time(first_time) < timedelta(minutes=5):
                 continue
             chosen = (trip, service_id, first, last, first_time, last_time)
             break
 
         if chosen is None:
-            raise RuntimeError("GTFS fixture has no usable active trip with two geocoded stops")
+            raise RuntimeError("GTFS fixture has no usable active trip inside the Aachen OSM fixture")
 
         trip, service_id, first, last, first_time, last_time = chosen
         service_date = service_dates[service_id]
@@ -151,6 +177,7 @@ def prepare(gtfs_zip: str, request_path: str, metadata_path: str):
             "time": request_time.isoformat(),
         }
         metadata = {
+            "fixtureArea": "Aachen",
             "agencyTimezone": timezone_name,
             "serviceDate": service_date.isoformat(),
             "serviceId": service_id,
