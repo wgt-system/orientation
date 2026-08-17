@@ -83,6 +83,26 @@ jobs:
         run: |
           set -euo pipefail
           ./motis config ../data/aachen.osm.pbf ../data/avv.gtfs.zip > /tmp/motis-config.log 2>&1
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          metadata = json.loads(Path("/tmp/orientation-motis-smoke/request-metadata.json").read_text(encoding="utf-8"))
+          service_date = metadata["serviceDate"]
+          config = Path("config.yml")
+          text = config.read_text(encoding="utf-8")
+          marker = "timetable:\n"
+          if marker not in text:
+              raise SystemExit("Generated MOTIS config has no timetable section")
+          text = text.replace(
+              marker,
+              f"timetable:\n  first_day: {service_date}\n  num_days: 7\n",
+              1,
+          )
+          config.write_text(text, encoding="utf-8")
+          print(f"Pinned MOTIS timetable window to {service_date} + 7 days")
+          print(text)
+          PY
           ./motis import > /tmp/motis-import.log 2>&1
 
       - name: Start pinned MOTIS runtime
