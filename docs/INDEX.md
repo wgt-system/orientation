@@ -17,5 +17,6 @@
 15. [Repository Bootstrap](15_REPOSITORY_BOOTSTRAP.md)
 16. [Product Direction after v0.3.0](16_PRODUCT_DIRECTION.md)
 17. [Spatial Research Contract 1.0](17_SPATIAL_RESEARCH_CONTRACT.md)
+18. [Spatial Research Prompt Generation](18_SPATIAL_RESEARCH_PROMPTS.md)
 
 ADRs live under [`docs/adr/`](adr/).
