@@ -24,6 +24,41 @@
           <p id="place-search-status" class="place-search-status" role="status" aria-live="polite"></p>
           <ol id="place-results" class="place-results" aria-label="Place search results"></ol>
         </form>
+        <section class="route-planner" aria-labelledby="route-planner-title">
+          <p class="route-planner-kicker">Route planning</p>
+          <h2 id="route-planner-title">Plan a route</h2>
+          <p class="route-planner-intro">Choose both endpoints explicitly, select a travel profile, then request the route.</p>
+          <div class="route-endpoint">
+            <label for="route-origin-query">Start</label>
+            <div class="place-search-row">
+              <input id="route-origin-query" type="search" placeholder="Search start place" autocomplete="off" />
+              <button id="route-origin-search" type="button">Find</button>
+            </div>
+            <p id="route-origin-status" class="place-search-status" role="status" aria-live="polite">No start selected.</p>
+            <ol id="route-origin-results" class="place-results route-results" aria-label="Start place results"></ol>
+          </div>
+          <div class="route-endpoint">
+            <label for="route-destination-query">Destination</label>
+            <div class="place-search-row">
+              <input id="route-destination-query" type="search" placeholder="Search destination" autocomplete="off" />
+              <button id="route-destination-search" type="button">Find</button>
+            </div>
+            <p id="route-destination-status" class="place-search-status" role="status" aria-live="polite">No destination selected.</p>
+            <ol id="route-destination-results" class="place-results route-results" aria-label="Destination place results"></ol>
+          </div>
+          <label class="route-profile-label" for="route-profile">Travel profile</label>
+          <select id="route-profile">
+            <option value="DRIVING" selected>Driving</option>
+            <option value="CYCLING">Cycling</option>
+            <option value="WALKING">Walking</option>
+          </select>
+          <div class="route-controls">
+            <button id="request-route" type="button" disabled>Request route</button>
+            <button id="clear-route" type="button" disabled>Clear route</button>
+          </div>
+          <p id="route-status" class="place-search-status" role="status" aria-live="polite">No route requested.</p>
+          <div id="route-summary" class="route-summary" hidden aria-live="polite"></div>
+        </section>
         <div id="selection" class="selection" aria-live="polite">
           Select a spatial feature on the map.
         </div>

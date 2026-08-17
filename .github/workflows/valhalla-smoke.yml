@@ -4,22 +4,38 @@ on:
   pull_request:
     paths:
       - ".github/workflows/valhalla-smoke.yml"
+      - ".github/scripts/photon-smoke-stub.py"
+      - ".github/scripts/reference-route-browser-smoke.py"
+      - ".github/scripts/screenshot-color-diagnostics.py"
       - "backend/src/main/java/system/wgt/orientation/application/routing/**"
       - "backend/src/main/java/system/wgt/orientation/domain/routing/**"
       - "backend/src/main/java/system/wgt/orientation/host/routing/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/routing/**"
       - "backend/src/main/resources/application.yaml"
       - "deployment/valhalla/**"
+      - "map/index.html"
+      - "map/src/lib/map-surface.ts"
+      - "map/src/lib/route-overlay.ts"
+      - "map/src/reference/**"
+      - "map/src/styles.css"
   push:
     branches: [dev]
     paths:
       - ".github/workflows/valhalla-smoke.yml"
+      - ".github/scripts/photon-smoke-stub.py"
+      - ".github/scripts/reference-route-browser-smoke.py"
+      - ".github/scripts/screenshot-color-diagnostics.py"
       - "backend/src/main/java/system/wgt/orientation/application/routing/**"
       - "backend/src/main/java/system/wgt/orientation/domain/routing/**"
       - "backend/src/main/java/system/wgt/orientation/host/routing/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/routing/**"
       - "backend/src/main/resources/application.yaml"
       - "deployment/valhalla/**"
+      - "map/index.html"
+      - "map/src/lib/map-surface.ts"
+      - "map/src/lib/route-overlay.ts"
+      - "map/src/reference/**"
+      - "map/src/styles.css"
   workflow_dispatch:
 
 permissions:
@@ -28,7 +44,7 @@ permissions:
 jobs:
   route-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
@@ -36,6 +52,11 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: map/package-lock.json
 
       - name: Start pinned Valhalla runtime
         run: docker compose -f deployment/valhalla/docker-compose.yml up -d
@@ -52,10 +73,25 @@ jobs:
           echo "Valhalla did not become ready within 10 minutes."
           exit 1
 
+      - name: Start deterministic Photon smoke stub
+        run: |
+          python3 .github/scripts/photon-smoke-stub.py > /tmp/photon-smoke.log 2>&1 &
+          echo $! > /tmp/photon-smoke.pid
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error "http://127.0.0.1:8999/api?q=health&limit=1" > /tmp/photon-health.json; then
+              cat /tmp/photon-health.json
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Photon smoke stub did not become ready."
+          exit 1
+
       - name: Start Orientation backend
         run: |
           cd backend
-          ./mvnw --batch-mode spring-boot:run > /tmp/orientation.log 2>&1 &
+          ORIENTATION_PHOTON_BASE_URL=http://127.0.0.1:8999 \
+            ./mvnw --batch-mode spring-boot:run > /tmp/orientation.log 2>&1 &
           echo $! > /tmp/orientation.pid
 
       - name: Wait for Orientation health
@@ -80,6 +116,12 @@ jobs:
           origin = {"longitude": 10.0067, "latitude": 53.5526}
           destination = {"longitude": 9.9921, "latitude": 53.5504}
 
+          def nearby(actual, expected, tolerance=0.02):
+              return (
+                  abs(actual["longitude"] - expected["longitude"]) <= tolerance
+                  and abs(actual["latitude"] - expected["latitude"]) <= tolerance
+              )
+
           for profile in ("DRIVING", "CYCLING", "WALKING"):
               payload = json.dumps({
                   "origin": origin,
@@ -102,26 +144,85 @@ jobs:
               assert route["distanceMeters"] > 0, (profile, route["distanceMeters"])
               assert route["durationSeconds"] > 0, (profile, route["durationSeconds"])
               assert route["profile"] == profile, (profile, route["profile"])
+              assert nearby(geometry[0], origin), (profile, "first", geometry[0], origin)
+              assert nearby(geometry[-1], destination), (profile, "last", geometry[-1], destination)
               print(
                   profile,
                   "points=", len(geometry),
                   "distanceMeters=", route["distanceMeters"],
                   "durationSeconds=", route["durationSeconds"],
+                  "first=", geometry[0],
+                  "last=", geometry[-1],
               )
           PY
+
+      - name: Build and start production Reference Host
+        run: |
+          cd map
+          npm ci
+          npm run build
+          ORIENTATION_BACKEND_URL=http://127.0.0.1:8080 \
+            npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/reference-host.log 2>&1 &
+          echo $! > /tmp/reference-host.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ > /tmp/reference-index.html; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Reference Host preview did not become ready."
+          exit 1
+
+      - name: Start ChromeDriver
+        run: |
+          "$CHROMEWEBDRIVER/chromedriver" --port=9515 --allowed-origins='*' > /tmp/chromedriver.log 2>&1 &
+          echo $! > /tmp/chromedriver.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:9515/status > /tmp/chromedriver-status.json; then
+              cat /tmp/chromedriver-status.json
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ChromeDriver did not become ready."
+          exit 1
+
+      - name: Run real Reference Host route browser smoke
+        run: python3 .github/scripts/reference-route-browser-smoke.py
+
+      - name: Screenshot color diagnostics
+        if: failure()
+        run: python3 .github/scripts/screenshot-color-diagnostics.py /tmp/reference-*.png
+
+      - name: Upload browser smoke screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-route-browser-smoke-${{ github.sha }}
+          path: /tmp/reference-*.png
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Diagnostics
         if: failure()
         run: |
           echo "=== Orientation ==="
           cat /tmp/orientation.log 2>/dev/null || true
+          echo "=== Photon stub ==="
+          cat /tmp/photon-smoke.log 2>/dev/null || true
+          echo "=== Reference Host ==="
+          cat /tmp/reference-host.log 2>/dev/null || true
+          echo "=== ChromeDriver ==="
+          cat /tmp/chromedriver.log 2>/dev/null || true
           echo "=== Valhalla ==="
           docker compose -f deployment/valhalla/docker-compose.yml logs --no-color valhalla || true
 
       - name: Cleanup
         if: always()
         run: |
-          if [ -f /tmp/orientation.pid ]; then
-            kill "$(cat /tmp/orientation.pid)" 2>/dev/null || true
-          fi
+          for pidfile in /tmp/chromedriver.pid /tmp/reference-host.pid /tmp/orientation.pid /tmp/photon-smoke.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" 2>/dev/null || true
+            fi
+          done
           docker compose -f deployment/valhalla/docker-compose.yml down -v || true

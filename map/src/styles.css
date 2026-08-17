@@ -35,6 +35,8 @@ body {
   position: relative;
   z-index: 2;
   padding: clamp(28px, 5vw, 54px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-right: 1px solid rgb(35 55 62 / 16%);
   background:
     linear-gradient(180deg, rgb(248 246 240 / 98%), rgb(232 229 219 / 96%));
@@ -83,7 +85,9 @@ h1 {
   margin-top: 28px;
 }
 
-.place-search label {
+.place-search label,
+.route-endpoint label,
+.route-profile-label {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -99,7 +103,10 @@ h1 {
 
 .place-search input,
 .place-search button,
-.reverse-lookup button {
+.reverse-lookup button,
+.route-planner input,
+.route-planner button,
+.route-planner select {
   min-height: 38px;
   border: 1px solid rgb(33 62 67 / 20%);
   border-radius: 8px;
@@ -108,21 +115,32 @@ h1 {
   font: inherit;
 }
 
-.place-search input {
+.place-search input,
+.route-planner input {
   min-width: 0;
   padding: 8px 10px;
 }
 
 .place-search button,
-.reverse-lookup button {
+.reverse-lookup button,
+.route-planner button,
+.route-planner select {
   padding: 8px 12px;
+}
+
+.place-search button,
+.reverse-lookup button,
+.route-planner button {
   cursor: pointer;
 }
 
 .place-search input:focus-visible,
 .place-search button:focus-visible,
 .reverse-lookup button:focus-visible,
-.place-result:focus-visible {
+.place-result:focus-visible,
+.route-planner input:focus-visible,
+.route-planner button:focus-visible,
+.route-planner select:focus-visible {
   border-color: #315a60;
   outline: 3px solid rgb(49 90 96 / 18%);
   outline-offset: 1px;
@@ -173,6 +191,98 @@ h1 {
 .place-result span {
   color: #536267;
   font-size: 0.78rem;
+}
+
+.route-planner {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgb(33 62 67 / 12%);
+}
+
+.route-planner-kicker {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #5f6f73;
+}
+
+.route-planner h2 {
+  margin: -4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: #213e43;
+}
+
+.route-planner-intro {
+  margin: -4px 0 2px;
+  color: #536267;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.route-endpoint {
+  display: grid;
+  gap: 7px;
+}
+
+.route-results {
+  max-height: 150px;
+}
+
+.route-profile-label {
+  margin-top: 2px;
+}
+
+.route-planner select {
+  width: 100%;
+  cursor: pointer;
+}
+
+.route-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.route-planner button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.route-summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  border: 1px solid rgb(33 62 67 / 14%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 55%);
+}
+
+.route-summary[hidden] {
+  display: none;
+}
+
+.route-summary strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: #213e43;
+}
+
+.route-summary span,
+.route-summary small {
+  color: #536267;
+}
+
+.route-summary small {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .reverse-lookup {
@@ -428,6 +538,8 @@ body:has(> .map) {
   }
 
   .panel {
+    overflow: visible;
+    overscroll-behavior: auto;
     border-right: 0;
     border-bottom: 1px solid rgb(35 55 62 / 16%);
   }
