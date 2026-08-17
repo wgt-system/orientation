@@ -2,7 +2,7 @@
 
 Orientation is the `wgt-system` **local-first personal spatial exploration and mobility bounded context** and the system owner of reusable generic geospatial capabilities.
 
-Its product and capability space answers three connected questions:
+Its product space answers three connected questions:
 
 - **Discover** — What is where, and which spatial candidates satisfy the question I am asking?
 - **Explore** — What is this place or spatial object, what evidence/information do I have about it, and what can I do with it?
@@ -10,11 +10,11 @@ Its product and capability space answers three connected questions:
 
 Current Location supports the same space: Orientation can consume and visualize a position supplied by a host while OS/browser permission ownership stays with that host.
 
-## Independent product direction
+## Standalone product workflow
 
-Orientation is not only a map/geocoder/router used by other bounded contexts. It is intended to be independently useful in the same architectural sense as Vocation and Illumination.
+Orientation is independently useful; it is not only a map/geocoder/router for other bounded contexts.
 
-A first-class Orientation workflow may be:
+The v0.4 baseline provides this first-class standalone loop:
 
 ```text
 spatial question / criteria
@@ -25,25 +25,31 @@ external ChatGPT / research interaction
         ↓
 versioned structured JSON
         ↓
-Orientation validation + import
+strict Orientation validation + import
         ↓
-local Orientation-owned spatial collection + provenance
+local SQLite-backed Orientation discovery collection + provenance
         ↓
-map/list exploration, filtering and comparison
+reopen after restart
         ↓
-route / mobility planning from an explicit or current position
+map/list exploration and evidence inspection
+        ↓
+select destination
+        ↓
+DRIVING / CYCLING / WALKING route planning
 ```
 
-The prompt may request facts that ordinary map providers do not expose reliably. Imported claims remain evidence-backed research data; Orientation must not silently turn heuristics into asserted sensitive personal characteristics.
+Research results are evidence-backed input, not automatically authoritative truth. Heuristic matches must not silently become asserted sensitive personal characteristics.
 
-A paid LLM API is not required for this workflow. Domain-specific prompt templates and import contracts remain Orientation-owned. Their existence does not by itself justify a generic prompt/LLM microservice.
+A paid LLM API is not required. Prompt semantics and structured import contracts remain Orientation-owned rather than becoming a generic system-wide prompt service.
 
 ## Ownership
 
 Orientation owns:
 
-- personal spatial discovery/research semantics and Orientation-owned imported spatial collections when introduced by a concrete slice;
-- provenance/evidence needed to understand imported spatial research;
+- personal spatial discovery/research semantics;
+- Orientation-owned spatial research prompt/import contracts;
+- imported discovery collections, provenance and evidence;
+- local persistence for Orientation-owned discovery state;
 - map scenes, geometry, features, layers, clustering and hit testing;
 - framework-independent map rendering;
 - map style/tile/provider integration;
@@ -64,42 +70,37 @@ Orientation does **not** own:
 - foreign authoritative persistence merely because foreign objects can be shown spatially;
 - a universal business-entity catalog or generic LLM platform.
 
-## Independence and product integration
+## Product integration
 
-Orientation and Vocation intentionally remain separate bounded contexts. Vocation asks job-market questions and remains authoritative for job-market meaning; Orientation asks spatial-discovery and mobility questions. Vocation may consume Orientation geocoding, rendering or routing without transferring job-domain ownership.
+Orientation and Vocation remain separate bounded contexts. Vocation remains authoritative for job-market meaning while Orientation owns generic place resolution, spatial exploration and mobility.
 
-`Wiiii Got This` may provide cross-platform composition/presentation of Orientation capabilities, but Orientation is independently authoritative and may have its own end-user application surface. The current Reference Host is still a development/acceptance surface; that does not prohibit a future standalone Orientation product UI.
+`Wiiii Got This` may compose Orientation capabilities into platform-specific product UI without becoming owner of Orientation semantics. The released `orientation.host-bridge` remains version `1.0`; the standalone Orientation browser application is separate from the reusable Embed Host and Reference Host.
 
 Provider-owned rich spatial projections are valid. A marker may expose provider-owned information and external resources without transferring their business meaning to Orientation.
 
 ## Repository / runtime shape
 
-One bounded context does not imply one process or one language.
-
 ```text
 orientation/
-├── backend/       Java 25 + Maven + Spring Boot
-├── map/           TypeScript + MapLibre GL JS
-├── contracts/     explicit versioned boundary/import artifacts when accepted
+├── backend/       Java 25 + Maven + Spring Boot + local SQLite persistence
+├── map/           TypeScript + MapLibre GL JS; standalone, Reference and Embed hosts
+├── contracts/     versioned boundary/import schemas and examples
 ├── deployment/    external runtime integration such as Valhalla
 ├── docs/
 └── scripts/
 ```
 
-A future standalone application host and local persistence may be added inside the same bounded context when the concrete product slice requires them. They do not require a new bounded context.
-
-Valhalla is treated as an upstream C++ routing engine behind an Orientation adapter, not as a WGT-owned C++ codebase.
+Valhalla is an upstream C++ routing engine behind an Orientation adapter, not a WGT-owned codebase.
 
 ## Released foundation
 
-- **v0.1.0** — provider-neutral Spatial Scene and Map Surface, rich feature interaction, host-supplied Current Location, `orientation.host-bridge` 1.0, Reference Host and embeddable Host.
-- **v0.1.1** — usable OpenFreeMap Liberty street/place basemap.
+- **v0.1.0** — provider-neutral Spatial Scene and Map Surface, rich feature interaction, host-supplied Current Location, `orientation.host-bridge` 1.0, Reference Host and Embed Host.
+- **v0.1.1** — OpenFreeMap Liberty street/place basemap.
 - **v0.1.2** — explicit MapLibre GL JS 6 Vite worker packaging and vector-source readiness gate.
 - **v0.2.0** — Orientation-owned Place model, forward place search and reverse geocoding through a replaceable Photon adapter and narrow HTTP endpoints.
-- **v0.3.0** — provider-neutral two-point routing, Valhalla 3.8.3 integration, DRIVING/CYCLING/WALKING, generic route rendering and Reference Host route planning.
+- **v0.3.0** — provider-neutral two-point routing, Valhalla 3.8.3 integration, DRIVING/CYCLING/WALKING, route rendering and Reference Host route planning.
+- **v0.4.0** — spatial-research contract 1.0, deterministic external-research prompts, strict import, local SQLite discovery persistence, restart/reopen support and the first standalone discovery-to-route application workflow.
 
-v0.3.0 is routing foundation, not full mobility navigation. It does not yet include public transit, shared-mobility providers, multimodal/time-aware routing, local Orientation research persistence or the standalone research/import product workflow.
+v0.4.0 does **not** claim public transit, realtime transit, shared mobility, multimodal journey planning, turn-by-turn live navigation, automatic background crawling, paid LLM/API execution, Vocation migration completion or cross-device synchronization.
 
-The post-v0.3 product direction is documented in [`docs/16_PRODUCT_DIRECTION.md`](docs/16_PRODUCT_DIRECTION.md).
-
-See [`docs/INDEX.md`](docs/INDEX.md) for the complete specification set.
+See [`docs/16_PRODUCT_DIRECTION.md`](docs/16_PRODUCT_DIRECTION.md) for the product direction and [`docs/INDEX.md`](docs/INDEX.md) for the complete specification set.
