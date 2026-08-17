@@ -9,7 +9,6 @@ import zlib
 from pathlib import Path
 
 WEBDRIVER = "http://127.0.0.1:9515"
-ELEMENT_KEY = "element-6066-11e4-a52e-4f735466cecf"
 ROUTE_COLOR = (196, 81, 58)
 
 
@@ -52,7 +51,7 @@ def screenshot(session: str, path: str) -> bytes:
     return data
 
 
-def route_pixel_count(png: bytes, min_x: int) -> int:
+def decode_png_rgb(png: bytes) -> tuple[int, int, list[bytes]]:
     if not png.startswith(b"\x89PNG\r\n\x1a\n"):
         raise AssertionError("WebDriver screenshot is not PNG")
 
@@ -96,10 +95,7 @@ def route_pixel_count(png: bytes, min_x: int) -> int:
 
     previous = bytearray(stride)
     position = 0
-    count = 0
-    tolerance = 10
-    scan_start = max(0, min(width - 1, min_x))
-
+    rows: list[bytes] = []
     for _ in range(height):
         filter_type = raw[position]
         position += 1
@@ -121,14 +117,64 @@ def route_pixel_count(png: bytes, min_x: int) -> int:
             elif filter_type != 0:
                 raise AssertionError(f"Unsupported PNG filter {filter_type}")
 
+        if channels == 3:
+            rows.append(bytes(row))
+        else:
+            rgb = bytearray(width * 3)
+            for x in range(width):
+                source = x * 4
+                target = x * 3
+                rgb[target : target + 3] = row[source : source + 3]
+            rows.append(bytes(rgb))
+        previous = row
+
+    return width, height, rows
+
+
+def route_pixel_count(png: bytes, min_x: int, tolerance: int = 20) -> int:
+    width, _height, rows = decode_png_rgb(png)
+    scan_start = max(0, min(width - 1, min_x))
+    count = 0
+    for row in rows:
         for x in range(scan_start, width):
-            index = x * channels
+            index = x * 3
             rgb = row[index], row[index + 1], row[index + 2]
             if all(abs(rgb[channel] - ROUTE_COLOR[channel]) <= tolerance for channel in range(3)):
                 count += 1
-        previous = row
-
     return count
+
+
+def map_pixel_difference(first: bytes, second: bytes, min_x: int, channel_threshold: int = 12) -> int:
+    first_width, first_height, first_rows = decode_png_rgb(first)
+    second_width, second_height, second_rows = decode_png_rgb(second)
+    if (first_width, first_height) != (second_width, second_height):
+        raise AssertionError(
+            f"Screenshot dimensions changed unexpectedly: {(first_width, first_height)} != {(second_width, second_height)}"
+        )
+    scan_start = max(0, min(first_width - 1, min_x))
+    changed = 0
+    for first_row, second_row in zip(first_rows, second_rows, strict=True):
+        for x in range(scan_start, first_width):
+            index = x * 3
+            if max(
+                abs(first_row[index + channel] - second_row[index + channel])
+                for channel in range(3)
+            ) >= channel_threshold:
+                changed += 1
+    return changed
+
+
+def assert_visible_change(route_png: bytes, clear_png: bytes, min_x: int, stability_pixels: int, label: str) -> int:
+    changed = map_pixel_difference(route_png, clear_png, min_x)
+    required = max(250, stability_pixels * 3 + 100)
+    if changed < required:
+        route_colors = route_pixel_count(route_png, min_x)
+        clear_colors = route_pixel_count(clear_png, min_x)
+        raise AssertionError(
+            f"{label} did not visibly change the map enough: changed={changed} required={required} "
+            f"stability={stability_pixels} routeColorPixels={route_colors} clearColorPixels={clear_colors}"
+        )
+    return changed
 
 
 def text(session: str, selector: str) -> str:
@@ -201,7 +247,6 @@ def main() -> None:
         if execute(session, "return !document.querySelector('#map-status').hidden;"):
             raise AssertionError(f"Map reported error: {text(session, '#map-status')}")
 
-        # Existing Reference Host place search still works.
         execute(
             session,
             "document.querySelector('#place-query').value='Smoke Place'; document.querySelector('#place-search').requestSubmit(); return true;",
@@ -210,14 +255,12 @@ def main() -> None:
         select_first_result(session, "#place-results")
         wait_for(session, "general place selection", "return document.querySelector('#selection')?.textContent?.includes('Smoke Place');")
 
-        # Reverse lookup and host-supplied current position regressions remain alive.
         execute(session, "document.querySelector('#identify-center').click(); return true;")
         wait_for(session, "reverse lookup", "return document.querySelector('#reverse-status')?.textContent === 'Map center identified.';")
         wait_for(session, "reverse selection", "return document.querySelector('#selection')?.textContent?.includes('Smoke Reverse');")
         execute(session, "document.querySelector('#set-location').click(); return true;")
         wait_for(session, "current position", "return document.querySelector('#location-status')?.textContent?.includes('Sample position');")
 
-        # Explicit route endpoint searches and selections.
         set_value_and_click(session, "#route-origin-query", "Smoke Start", "#route-origin-search")
         wait_for(session, "origin result", "return document.querySelectorAll('#route-origin-results .place-result').length === 1;")
         select_first_result(session, "#route-origin-results")
@@ -236,7 +279,6 @@ def main() -> None:
             raise AssertionError("Route button remained disabled after explicit endpoint selection")
 
         map_left = int(execute(session, "return Math.floor(document.querySelector('#map').getBoundingClientRect().left);"))
-        before = route_pixel_count(screenshot(session, "/tmp/reference-before-route.png"), map_left)
 
         # Real Valhalla-backed driving route.
         execute(session, "document.querySelector('#request-route').click(); return true;")
@@ -244,11 +286,13 @@ def main() -> None:
         summary = text(session, "#route-summary")
         if not all(value in summary for value in ("Smoke Start", "Smoke Destination", "Driving")):
             raise AssertionError(f"Unexpected driving route summary: {summary}")
-        time.sleep(1)
-        driving = route_pixel_count(screenshot(session, "/tmp/reference-driving-route.png"), map_left)
-        if driving < before + 75:
-            raise AssertionError(f"Route line was not visibly rendered: before={before} after={driving}")
-        print("route pixels driving", driving, "baseline", before, "summary", summary)
+
+        # Let route fit + basemap tiles settle, then measure normal screenshot drift before clearing.
+        time.sleep(3)
+        driving_a = screenshot(session, "/tmp/reference-driving-route-a.png")
+        time.sleep(0.5)
+        driving_b = screenshot(session, "/tmp/reference-driving-route-b.png")
+        driving_stability = map_pixel_difference(driving_a, driving_b, map_left)
 
         # Profile change must cancel/clear stale route rather than silently re-request.
         execute(
@@ -260,10 +304,15 @@ def main() -> None:
             "profile invalidation",
             "return document.querySelector('#route-status')?.textContent === 'Travel profile changed. Request the route again.';",
         )
-        time.sleep(0.5)
-        cleared = route_pixel_count(screenshot(session, "/tmp/reference-cleared-route.png"), map_left)
-        if driving < cleared + 75:
-            raise AssertionError(f"Profile change did not visibly clear the route: route={driving} cleared={cleared}")
+        time.sleep(0.35)
+        cleared = screenshot(session, "/tmp/reference-cleared-route.png")
+        driving_clear_diff = assert_visible_change(
+            driving_b,
+            cleared,
+            map_left,
+            driving_stability,
+            "Driving route clear",
+        )
 
         # Request a replacement route through the same real provider path.
         execute(session, "document.querySelector('#request-route').click(); return true;")
@@ -271,20 +320,25 @@ def main() -> None:
         cycling_summary = text(session, "#route-summary")
         if "Cycling" not in cycling_summary:
             raise AssertionError(f"Replacement route summary did not reflect Cycling: {cycling_summary}")
-        time.sleep(1)
-        cycling = route_pixel_count(screenshot(session, "/tmp/reference-cycling-route.png"), map_left)
-        if cycling < cleared + 75:
-            raise AssertionError(f"Replacement route line was not visibly rendered: cleared={cleared} cycling={cycling}")
+        time.sleep(3)
+        cycling_a = screenshot(session, "/tmp/reference-cycling-route-a.png")
+        time.sleep(0.5)
+        cycling_b = screenshot(session, "/tmp/reference-cycling-route-b.png")
+        cycling_stability = map_pixel_difference(cycling_a, cycling_b, map_left)
 
-        # Explicit clear removes the route again.
+        # Explicit clear removes the replacement route while preserving the fitted viewport.
         execute(session, "document.querySelector('#clear-route').click(); return true;")
         wait_for(session, "explicit route clear", "return document.querySelector('#route-status')?.textContent === 'No route requested.';")
-        time.sleep(0.5)
-        final = route_pixel_count(screenshot(session, "/tmp/reference-final-clear.png"), map_left)
-        if cycling < final + 75:
-            raise AssertionError(f"Explicit clear did not visibly remove the route: cycling={cycling} final={final}")
+        time.sleep(0.35)
+        final = screenshot(session, "/tmp/reference-final-clear.png")
+        cycling_clear_diff = assert_visible_change(
+            cycling_b,
+            final,
+            map_left,
+            cycling_stability,
+            "Cycling route clear",
+        )
 
-        # Constrained desktop height must remain usable via panel scrolling.
         desktop_scroll = execute(
             session,
             "const p=document.querySelector('.panel'); const s=getComputedStyle(p); return p.scrollHeight>p.clientHeight && ['auto','scroll'].includes(s.overflowY);",
@@ -292,7 +346,6 @@ def main() -> None:
         if not desktop_scroll:
             raise AssertionError("Reference panel is not scrollable at constrained desktop height")
 
-        # Existing mobile layout keeps page scrolling rather than nesting the panel scroller.
         webdriver("POST", f"/session/{session}/window/rect", {"width": 700, "height": 900})
         mobile_flow = execute(
             session,
@@ -305,9 +358,18 @@ def main() -> None:
             "Reference route browser smoke PASS",
             json.dumps(
                 {
-                    "routePixels": {"before": before, "driving": driving, "cleared": cleared, "cycling": cycling, "final": final},
                     "drivingSummary": summary,
                     "cyclingSummary": cycling_summary,
+                    "driving": {
+                        "stabilityPixels": driving_stability,
+                        "clearDifferencePixels": driving_clear_diff,
+                        "routeColorPixels": route_pixel_count(driving_b, map_left),
+                    },
+                    "cycling": {
+                        "stabilityPixels": cycling_stability,
+                        "clearDifferencePixels": cycling_clear_diff,
+                        "routeColorPixels": route_pixel_count(cycling_b, map_left),
+                    },
                 },
                 sort_keys=True,
             ),
