@@ -6,7 +6,7 @@ This repository owns the **Orientation** bounded context in the `wgt-system` org
 
 Orientation is an independently useful local-first personal spatial exploration and mobility context. It also provides reusable generic geospatial capabilities to other accepted bounded contexts and WGT hosts.
 
-Its current capability space includes Discover, Explore, Navigate and Current Location. The v0.4 baseline includes Orientation-owned spatial research prompts/imports, persistent personal discovery collections and a first-class standalone discovery-to-route application workflow.
+Its current capability space includes Discover, Explore, Navigate and Current Location. The released v0.4 baseline includes Orientation-owned spatial research prompts/imports, persistent personal discovery collections and a first-class standalone discovery-to-direct-route workflow. The v0.5 release candidate adds a separate time-dependent public-transit Journey model, MOTIS-backed planning, reusable Journey rendering and standalone Journey comparison/selection.
 
 ## WGT System Architecture
 
@@ -22,7 +22,7 @@ Do not independently implement a generic capability already owned by another acc
 
 Generic durable opaque cross-device delivery is owned by **Conveyance**.
 
-Generic geospatial/map/geocoding/routing capability is owned by **Orientation**. Orientation also owns its domain-specific external spatial-research prompt/import workflow and the resulting Orientation-owned discovery state.
+Generic geospatial/map/geocoding/routing/mobility capability is owned by **Orientation**. Orientation also owns its domain-specific external spatial-research prompt/import workflow and the resulting Orientation-owned discovery state.
 
 This does not transfer provider-domain semantics to Orientation. Vocation continues to own Work Location, Opportunity, Company, Posting, External Link and other job-market meaning. WGT continues to own device/platform product integration and presentation.
 
@@ -43,7 +43,8 @@ Orientation owns:
 - basemap/tile/style/provider integration;
 - generic geocoding and reverse geocoding;
 - generic place/POI discovery;
-- generic routing, route geometry, distance/duration and directions;
+- generic direct routing, Route geometry, distance/duration and directions;
+- provider-neutral public-transit Journey semantics and Journey rendering;
 - generic current-position and accuracy representation;
 - generic mobility-planning semantics and mobility-provider adapters introduced by accepted slices;
 - geospatial provider adapters, technical caching, rate/failure handling and performance policy.
@@ -90,7 +91,7 @@ Use dependency direction:
 
 `domain <- application <- adapters/infrastructure <- host`
 
-Domain must not depend on Spring, HTTP clients, persistence technology, Valhalla, third-party providers or map rendering.
+Domain must not depend on Spring, HTTP clients, persistence technology, Valhalla, MOTIS, third-party providers or map rendering.
 
 Application defines ports. Provider/persistence/import adapters implement those ports.
 
@@ -104,11 +105,17 @@ MapLibre GL JS is infrastructure. Scene/input/output contracts must not expose M
 
 Map interaction should emit generic events/references. A host decides product/domain navigation and external-resource execution where that meaning is host/provider-owned.
 
+Direct Route and Journey overlays are separate reusable states. Do not couple them implicitly in the Map Surface; product hosts decide whether their presentation is mutually exclusive.
+
 ### Routing and mobility
 
-Valhalla is an external engine behind an Orientation-owned adapter. Do not fork/vendor Valhalla source into this repository without a separate explicit decision.
+Valhalla is the external engine behind the Orientation-owned direct `RoutingPort` adapter. Do not fork/vendor Valhalla source into this repository without a separate explicit decision.
 
-The released travel profiles are DRIVING/CYCLING/WALKING. Public transit, time-aware routing, shared mobility and multimodal planning require explicit future slices and appropriate provider/data boundaries; do not fake them through the existing profile model.
+Direct `TravelProfile` remains exactly DRIVING/CYCLING/WALKING.
+
+Public transit uses the separate time-dependent `Journey` model and `JourneyPort`. MOTIS v2.11.0 is the first accepted Journey adapter. Provider DTOs/mode enums/errors stay in infrastructure. Default configuration targets local MOTIS; deterministic acceptance uses a pinned self-hosted MOTIS runtime and pinned Aachen OSM/GTFS fixture rather than public Transitous.
+
+Do not add `TRANSIT` to direct `TravelProfile` or collapse Journey into Route. Shared mobility/GBFS, fares/ticketing, richer disruption semantics and arbitrary multimodal sharing optimization require explicit later slices rather than being inferred from MOTIS capabilities.
 
 ## Current technology baseline
 
@@ -119,7 +126,9 @@ The released travel profiles are DRIVING/CYCLING/WALKING. Public transit, time-a
 - Node.js 24 LTS for map tooling
 - TypeScript
 - MapLibre GL JS 6
-- Valhalla as upstream routing engine
+- Photon-compatible place/geocoding provider boundary
+- Valhalla as upstream direct-routing engine
+- MOTIS v2.11.0 as the first upstream public-transit Journey engine
 
 Exact dependency versions are repository implementation facts and may be updated through normal maintenance.
 
@@ -127,13 +136,13 @@ Exact dependency versions are repository implementation facts and may be updated
 
 Orientation currently has three intentionally separate browser surfaces:
 
-- **Standalone App** — first-class Orientation end-user discovery/research/import/map/route workflow;
-- **Reference Host** — development/acceptance surface for reusable geospatial capabilities;
+- **Standalone App** — first-class Orientation end-user research/import/discovery/map/navigation workflow, including direct Route and the v0.5 public-transit Journey candidate;
+- **Reference Host** — development/acceptance surface for reusable geospatial/direct-routing capabilities;
 - **Embed Host** — reusable host boundary using `orientation.host-bridge` 1.0.
 
 Do not collapse standalone product semantics into the reusable Map Surface or Host Bridge merely for convenience.
 
-WGT may present Orientation on platform-specific hosts without becoming owner of Orientation semantics. Desktop Orientation hosting is already established; physical-iPhone validation is not established and must not be inferred from compile-only or desktop evidence.
+WGT may present Orientation on platform-specific hosts without becoming owner of Orientation semantics. Desktop Orientation hosting is established; physical-iPhone validation is not established and must not be inferred from compile-only or desktop evidence.
 
 ## Branch and worker workflow
 
