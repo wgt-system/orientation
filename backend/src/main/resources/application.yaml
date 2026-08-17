@@ -12,6 +12,8 @@ server:
   shutdown: graceful
 
 orientation:
+  discovery:
+    database-path: ${ORIENTATION_DATABASE_PATH:./data/orientation.db}
   photon:
     base-url: https://photon.komoot.io
     connect-timeout: 3s

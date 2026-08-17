@@ -6,3 +6,4 @@
 - [ADR-0004 — Valhalla routing engine boundary](0004-valhalla-routing-engine-boundary.md)
 - [ADR-0005 — Host-owned current-location permission](0005-host-owned-current-location-permission.md)
 - [ADR-0006 — Standalone product role and domain-owned spatial research acquisition](0006-standalone-product-and-spatial-research.md)
+- [ADR-0007 — Local SQLite persistence for Orientation discovery state](0007-local-sqlite-discovery-persistence.md)
