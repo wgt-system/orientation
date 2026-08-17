@@ -7,11 +7,11 @@ Valhalla is the selected upstream routing engine behind the Orientation `Routing
 - Valhalla: `3.8.3`
 - image: `ghcr.io/valhalla/valhalla-scripted:3.8.3`
 - service port: `8002`
-- dataset: Geofabrik Hamburg snapshot `hamburg-260726.osm.pbf`
-- dataset URL: `https://download.geofabrik.de/europe/germany/hamburg-260726.osm.pbf`
+- dataset: Geofabrik Hamburg monthly snapshot `hamburg-260801.osm.pbf`
+- dataset URL: `https://download.geofabrik.de/europe/germany/hamburg-260801.osm.pbf`
 - persistent generated graph/config data: Docker volume `valhalla-data`
 
-The version and OSM snapshot are deliberately pinned. Do not replace either with `latest` in committed development configuration.
+The Valhalla version and the monthly OSM snapshot are deliberately pinned. Do not replace either with `latest` in committed development configuration. Geofabrik retains the monthly Hamburg snapshots in its region download index, unlike short-lived daily snapshots.
 
 The upstream scripted image is maintained in the Valhalla repository and builds its graph/configuration in `/custom_files`. The Orientation compose file keeps those generated artifacts in a named Docker volume rather than the repository working tree.
 
