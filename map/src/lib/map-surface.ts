@@ -17,6 +17,14 @@ import {
   type PositionFix,
 } from "./current-location";
 import {
+  createJourneyFeatureCollection,
+  JourneyOverlayController,
+  resolveJourneyViewport,
+  type JourneyOverlay,
+  type JourneyViewportIntent,
+  type ResolvedJourneyViewport,
+} from "./journey-overlay";
+import {
   resolveRouteViewport,
   RouteOverlayController,
   type Route,
@@ -30,6 +38,13 @@ const ROUTE_CASING_LAYER = "orientation-route-casing";
 const ROUTE_LINE_LAYER = "orientation-route-line";
 const ROUTE_ORIGIN_LAYER = "orientation-route-origin";
 const ROUTE_DESTINATION_LAYER = "orientation-route-destination";
+const JOURNEY_SOURCE = "orientation-journey";
+const JOURNEY_CASING_LAYER = "orientation-journey-casing";
+const JOURNEY_WALK_LAYER = "orientation-journey-walk";
+const JOURNEY_TRANSIT_LAYER = "orientation-journey-transit";
+const JOURNEY_STOP_LAYER = "orientation-journey-transit-stop";
+const JOURNEY_ORIGIN_LAYER = "orientation-journey-origin";
+const JOURNEY_DESTINATION_LAYER = "orientation-journey-destination";
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] } as const;
 const VECTOR_BASEMAP_SOURCE = "openmaptiles";
 export const BASEMAP_READINESS_TIMEOUT_MS = 15_000;
@@ -54,6 +69,7 @@ export class OrientationMapSurface {
   private readonly sceneController = new SpatialSceneController();
   private readonly currentLocationController = new CurrentLocationController();
   private readonly routeController = new RouteOverlayController();
+  private readonly journeyController = new JourneyOverlayController();
   private readonly callbacks: OrientationMapCallbacks;
   private readonly map: Map;
   private markers: Marker[] = [];
@@ -80,8 +96,10 @@ export class OrientationMapSurface {
       this.map.once("load", () => {
         if (this.status !== "destroyed") {
           this.installRouteLayers();
+          this.installJourneyLayers();
           this.installCurrentLocationLayers();
           this.renderRoute();
+          this.renderJourney();
           this.renderCurrentLocation();
           this.waitForVectorBasemap();
         }
@@ -130,6 +148,24 @@ export class OrientationMapSurface {
   currentRoute(): Route | null {
     this.assertUsable();
     return this.routeController.current();
+  }
+
+  setJourney(journey: JourneyOverlay, viewport: JourneyViewportIntent = { kind: "fit" }): void {
+    this.assertUsable();
+    const snapshot = this.journeyController.set(journey);
+    this.renderJourney();
+    this.applyJourneyViewport(resolveJourneyViewport(snapshot, viewport));
+  }
+
+  clearJourney(): void {
+    this.assertUsable();
+    this.journeyController.clear();
+    this.renderJourney();
+  }
+
+  currentJourney(): JourneyOverlay | null {
+    this.assertUsable();
+    return this.journeyController.current();
   }
 
   setCurrentPosition(position: PositionFix): void {
@@ -181,8 +217,10 @@ export class OrientationMapSurface {
     this.clearMarkers();
     this.sceneController.clear();
     this.routeController.clear();
+    this.journeyController.clear();
     this.currentLocationController.clear();
     this.removeCurrentLocationLayers();
+    this.removeJourneyLayers();
     this.removeRouteLayers();
     this.map.remove();
     this.setStatus("destroyed");
@@ -221,6 +259,13 @@ export class OrientationMapSurface {
   }
 
   private applyRouteViewport(viewport: ResolvedRouteViewport): void {
+    if (viewport.kind === "preserve") {
+      return;
+    }
+    this.fitBounds(viewport.bounds, viewport.padding, viewport.maxZoom);
+  }
+
+  private applyJourneyViewport(viewport: ResolvedJourneyViewport): void {
     if (viewport.kind === "preserve") {
       return;
     }
@@ -333,6 +378,129 @@ export class OrientationMapSurface {
     }
     if (this.map.getSource(ROUTE_SOURCE)) {
       this.map.removeSource(ROUTE_SOURCE);
+    }
+  }
+
+  private installJourneyLayers(): void {
+    if (this.map.getSource(JOURNEY_SOURCE)) {
+      return;
+    }
+
+    this.map.addSource(JOURNEY_SOURCE, {
+      type: "geojson",
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+    this.map.addLayer({
+      id: JOURNEY_CASING_LAYER,
+      type: "line",
+      source: JOURNEY_SOURCE,
+      filter: ["==", ["get", "kind"], "leg"],
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": "#f7f4ed",
+        "line-opacity": 0.94,
+        "line-width": 8,
+      },
+    });
+    this.map.addLayer({
+      id: JOURNEY_WALK_LAYER,
+      type: "line",
+      source: JOURNEY_SOURCE,
+      filter: ["all", ["==", ["get", "kind"], "leg"], ["==", ["get", "travelKind"], "walk"]],
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": "#315a60",
+        "line-opacity": 0.96,
+        "line-width": 4,
+        "line-dasharray": [1.2, 1.6],
+      },
+    });
+    this.map.addLayer({
+      id: JOURNEY_TRANSIT_LAYER,
+      type: "line",
+      source: JOURNEY_SOURCE,
+      filter: ["all", ["==", ["get", "kind"], "leg"], ["==", ["get", "travelKind"], "transit"]],
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": "#2f6f8f",
+        "line-opacity": 0.98,
+        "line-width": 5,
+      },
+    });
+    this.map.addLayer({
+      id: JOURNEY_STOP_LAYER,
+      type: "circle",
+      source: JOURNEY_SOURCE,
+      filter: ["==", ["get", "kind"], "transit-stop"],
+      paint: {
+        "circle-color": "#f7f4ed",
+        "circle-radius": 5,
+        "circle-stroke-color": "#2f6f8f",
+        "circle-stroke-width": 2,
+      },
+    });
+    this.map.addLayer({
+      id: JOURNEY_ORIGIN_LAYER,
+      type: "circle",
+      source: JOURNEY_SOURCE,
+      filter: ["==", ["get", "kind"], "origin"],
+      paint: {
+        "circle-color": "#163f49",
+        "circle-radius": 7,
+        "circle-stroke-color": "#f7f4ed",
+        "circle-stroke-width": 2,
+      },
+    });
+    this.map.addLayer({
+      id: JOURNEY_DESTINATION_LAYER,
+      type: "circle",
+      source: JOURNEY_SOURCE,
+      filter: ["==", ["get", "kind"], "destination"],
+      paint: {
+        "circle-color": "#a63f31",
+        "circle-radius": 7,
+        "circle-stroke-color": "#f7f4ed",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+
+  private renderJourney(): void {
+    if (this.status === "destroyed" || !this.map.getSource(JOURNEY_SOURCE)) {
+      return;
+    }
+    const source = this.map.getSource(JOURNEY_SOURCE) as GeoJSONSource | undefined;
+    if (!source || source.type !== "geojson") {
+      return;
+    }
+    const journey = this.journeyController.current();
+    source.setData(journey ? createJourneyFeatureCollection(journey) : EMPTY_FEATURE_COLLECTION);
+  }
+
+  private removeJourneyLayers(): void {
+    for (const layer of [
+      JOURNEY_DESTINATION_LAYER,
+      JOURNEY_ORIGIN_LAYER,
+      JOURNEY_STOP_LAYER,
+      JOURNEY_TRANSIT_LAYER,
+      JOURNEY_WALK_LAYER,
+      JOURNEY_CASING_LAYER,
+    ]) {
+      if (this.map.getLayer(layer)) {
+        this.map.removeLayer(layer);
+      }
+    }
+    if (this.map.getSource(JOURNEY_SOURCE)) {
+      this.map.removeSource(JOURNEY_SOURCE);
     }
   }
 
