@@ -1,6 +1,6 @@
 # Orientation – Domain Model
 
-**Status:** Conceptual bootstrap model; no Published Contract is frozen by this document.
+**Status:** v0.4.0 discovery model extends the released v0.1-v0.3 geospatial baseline; no Published Contract is frozen by this document.
 
 ## Value objects
 
@@ -107,14 +107,46 @@ non-negative duration seconds. `RouteGeometry` is an immutable ordered list
 of validated Coordinates with at least two and at most 10,000 points. An
 encoded provider polyline and provider identifiers are not domain requirements.
 
-The initial v0.3.0 implementation proves the generic model and HTTP boundary;
-Valhalla mapping and runtime integration are later work.
+The released v0.3.0 implementation provides the provider-neutral model plus Valhalla-backed DRIVING/CYCLING/WALKING route planning and rendering.
 
-The exact versioned transport/API shapes are introduced only with implementation slices.
+### SpatialResearchQuestion
+
+The v0.4 standalone discovery flow introduces an explicit spatial research question:
+
+- local question reference;
+- user-supplied question text;
+- explicit radial area center and optional supplied Coordinate;
+- radius;
+- ordered Criteria with `EVIDENCE_REQUIRED` or `HEURISTIC` evaluation mode.
+
+The question is Orientation-owned input. Device position is not silently acquired or inserted.
+
+### DiscoveryCollection
+
+A Discovery Collection is durable Orientation-owned state created from one accepted Spatial Research Bundle import.
+
+It contains:
+
+- Orientation collection identity and deterministic import fingerprint;
+- research timestamp and question/area snapshot;
+- ordered Criteria;
+- external research Sources with retrieval timestamps;
+- researched Candidates;
+- optional strong identity hints (canonical HTTPS URI and/or explicit provider identifier);
+- Researched Location evidence;
+- one Claim per Criterion, including status, basis, optional typed observed value, note and source references.
+
+A Discovery Collection is not raw imported JSON. The external bundle is validated and translated before the collection exists.
+
+`ResearchedLocation` is not the same type or authority as provider-backed `Place`. Research evidence may later be reconciled/geocoded explicitly without erasing that distinction.
+
+A `HEURISTIC` claim records only a match against the user-defined heuristic. It does not create an asserted sensitive-trait fact from a proxy such as a name or language pattern.
+
+Re-import of the same canonical bundle reuses the existing collection. Changed research creates a new collection in the initial v0.4 baseline; no cross-collection fuzzy merge is implied.
 
 ## Authority
 
-Orientation is authoritative for its own generic geospatial interpretation, provider-adapter behavior and technical caches if introduced.
+Orientation is authoritative for its own generic geospatial interpretation, provider-adapter behavior and Orientation-owned personal discovery state.
 
 It is not authoritative for:
 
@@ -122,8 +154,13 @@ It is not authoritative for:
 - another provider's business fields;
 - OS permission decisions;
 - external map/place datasets;
-- user learning/job state.
+- user learning/job state;
+- truth of an external researched claim merely because the claim was imported.
 
 ## Persistence
 
-No general Orientation database is selected at bootstrap. Persistence must be justified by a concrete capability (for example a cache/index/import pipeline) and must not become a copy of foreign domain state.
+The accepted v0.4 standalone discovery requirement justifies the first general Orientation database.
+
+Discovery Collections and their provenance are stored locally in SQLite behind `DiscoveryRepository`; see ADR-0007. The database stores Orientation-owned state only and must not become a copy of another bounded context's authoritative data.
+
+Technical provider caches, if introduced later, remain separate in authority from imported research and durable personal discovery state.
