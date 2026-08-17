@@ -6,36 +6,54 @@ on:
       - ".github/workflows/valhalla-smoke.yml"
       - ".github/scripts/photon-smoke-stub.py"
       - ".github/scripts/reference-route-browser-smoke.py"
+      - ".github/scripts/standalone-discovery-browser-smoke.py"
       - ".github/scripts/screenshot-color-diagnostics.py"
       - "backend/src/main/java/system/wgt/orientation/application/routing/**"
       - "backend/src/main/java/system/wgt/orientation/domain/routing/**"
       - "backend/src/main/java/system/wgt/orientation/host/routing/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/routing/**"
-      - "backend/src/main/resources/application.yaml"
+      - "backend/src/main/java/system/wgt/orientation/application/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/host/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/discovery/**"
+      - "backend/src/main/resources/**"
+      - "contracts/examples/spatial-research-v1.valid.json"
       - "deployment/valhalla/**"
       - "map/index.html"
+      - "map/app.html"
+      - "map/src/app/**"
       - "map/src/lib/map-surface.ts"
       - "map/src/lib/route-overlay.ts"
       - "map/src/reference/**"
       - "map/src/styles.css"
+      - "map/vite.config.ts"
   push:
     branches: [dev]
     paths:
       - ".github/workflows/valhalla-smoke.yml"
       - ".github/scripts/photon-smoke-stub.py"
       - ".github/scripts/reference-route-browser-smoke.py"
+      - ".github/scripts/standalone-discovery-browser-smoke.py"
       - ".github/scripts/screenshot-color-diagnostics.py"
       - "backend/src/main/java/system/wgt/orientation/application/routing/**"
       - "backend/src/main/java/system/wgt/orientation/domain/routing/**"
       - "backend/src/main/java/system/wgt/orientation/host/routing/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/routing/**"
-      - "backend/src/main/resources/application.yaml"
+      - "backend/src/main/java/system/wgt/orientation/application/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/host/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/discovery/**"
+      - "backend/src/main/resources/**"
+      - "contracts/examples/spatial-research-v1.valid.json"
       - "deployment/valhalla/**"
       - "map/index.html"
+      - "map/app.html"
+      - "map/src/app/**"
       - "map/src/lib/map-surface.ts"
       - "map/src/lib/route-overlay.ts"
       - "map/src/reference/**"
       - "map/src/styles.css"
+      - "map/vite.config.ts"
   workflow_dispatch:
 
 permissions:
@@ -89,7 +107,9 @@ jobs:
 
       - name: Start Orientation backend
         run: |
+          rm -f /tmp/orientation-smoke.db /tmp/orientation-standalone-collection-id
           cd backend
+          ORIENTATION_DATABASE_PATH=/tmp/orientation-smoke.db \
           ORIENTATION_PHOTON_BASE_URL=http://127.0.0.1:8999 \
             ./mvnw --batch-mode spring-boot:run > /tmp/orientation.log 2>&1 &
           echo $! > /tmp/orientation.pid
@@ -146,17 +166,10 @@ jobs:
               assert route["profile"] == profile, (profile, route["profile"])
               assert nearby(geometry[0], origin), (profile, "first", geometry[0], origin)
               assert nearby(geometry[-1], destination), (profile, "last", geometry[-1], destination)
-              print(
-                  profile,
-                  "points=", len(geometry),
-                  "distanceMeters=", route["distanceMeters"],
-                  "durationSeconds=", route["durationSeconds"],
-                  "first=", geometry[0],
-                  "last=", geometry[-1],
-              )
+              print(profile, "points=", len(geometry), "distanceMeters=", route["distanceMeters"], "durationSeconds=", route["durationSeconds"])
           PY
 
-      - name: Build and start production Reference Host
+      - name: Build and start production Orientation browser hosts
         run: |
           cd map
           npm ci
@@ -165,12 +178,13 @@ jobs:
             npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/reference-host.log 2>&1 &
           echo $! > /tmp/reference-host.pid
           for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error http://127.0.0.1:4173/ > /tmp/reference-index.html; then
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ > /tmp/reference-index.html \
+              && curl --fail --silent --show-error http://127.0.0.1:4173/app.html > /tmp/orientation-app.html; then
               exit 0
             fi
             sleep 1
           done
-          echo "Reference Host preview did not become ready."
+          echo "Orientation browser preview did not become ready."
           exit 1
 
       - name: Start ChromeDriver
@@ -190,6 +204,42 @@ jobs:
       - name: Run real Reference Host route browser smoke
         run: python3 .github/scripts/reference-route-browser-smoke.py
 
+      - name: Import through standalone Orientation app
+        run: python3 .github/scripts/standalone-discovery-browser-smoke.py import
+
+      - name: Restart Orientation backend with the same discovery database
+        run: |
+          parent="$(cat /tmp/orientation.pid)"
+          pkill -TERM -P "$parent" 2>/dev/null || true
+          kill "$parent" 2>/dev/null || true
+          for attempt in $(seq 1 30); do
+            if ! curl --silent --max-time 1 http://localhost:8080/actuator/health >/dev/null 2>&1; then
+              break
+            fi
+            if [ "$attempt" = "30" ]; then
+              echo "Orientation backend did not stop before restart."
+              exit 1
+            fi
+            sleep 1
+          done
+          cd backend
+          ORIENTATION_DATABASE_PATH=/tmp/orientation-smoke.db \
+          ORIENTATION_PHOTON_BASE_URL=http://127.0.0.1:8999 \
+            ./mvnw --batch-mode spring-boot:run > /tmp/orientation-restart.log 2>&1 &
+          echo $! > /tmp/orientation.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://localhost:8080/actuator/health > /tmp/orientation-restart-health.json; then
+              cat /tmp/orientation-restart-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Orientation did not become healthy after restart."
+          exit 1
+
+      - name: Reopen persisted discovery and route through standalone app
+        run: python3 .github/scripts/standalone-discovery-browser-smoke.py reopen
+
       - name: Screenshot color diagnostics
         if: failure()
         run: python3 .github/scripts/screenshot-color-diagnostics.py /tmp/reference-*.png
@@ -198,7 +248,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: reference-route-browser-smoke-${{ github.sha }}
+          name: orientation-browser-smoke-${{ github.sha }}
           path: /tmp/reference-*.png
           if-no-files-found: warn
           retention-days: 3
@@ -206,11 +256,13 @@ jobs:
       - name: Diagnostics
         if: failure()
         run: |
-          echo "=== Orientation ==="
+          echo "=== Orientation initial ==="
           cat /tmp/orientation.log 2>/dev/null || true
+          echo "=== Orientation restart ==="
+          cat /tmp/orientation-restart.log 2>/dev/null || true
           echo "=== Photon stub ==="
           cat /tmp/photon-smoke.log 2>/dev/null || true
-          echo "=== Reference Host ==="
+          echo "=== Browser hosts ==="
           cat /tmp/reference-host.log 2>/dev/null || true
           echo "=== ChromeDriver ==="
           cat /tmp/chromedriver.log 2>/dev/null || true
@@ -222,7 +274,10 @@ jobs:
         run: |
           for pidfile in /tmp/chromedriver.pid /tmp/reference-host.pid /tmp/orientation.pid /tmp/photon-smoke.pid; do
             if [ -f "$pidfile" ]; then
-              kill "$(cat "$pidfile")" 2>/dev/null || true
+              parent="$(cat "$pidfile")"
+              pkill -TERM -P "$parent" 2>/dev/null || true
+              kill "$parent" 2>/dev/null || true
             fi
           done
+          rm -f /tmp/orientation-smoke.db /tmp/orientation-standalone-collection-id
           docker compose -f deployment/valhalla/docker-compose.yml down -v || true

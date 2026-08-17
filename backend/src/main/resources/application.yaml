@@ -1,3 +1,4 @@
+# v0.4.0 release gate: persistent discovery is covered by the real Valhalla/Chrome smoke.
 spring:
   application:
     name: orientation
@@ -12,6 +13,8 @@ server:
   shutdown: graceful
 
 orientation:
+  discovery:
+    database-path: ${ORIENTATION_DATABASE_PATH:./data/orientation.db}
   photon:
     base-url: https://photon.komoot.io
     connect-timeout: 3s

@@ -19,6 +19,8 @@
 
   <properties>
     <java.version>25</java.version>
+    <jackson-bom.version>3.1.5</jackson-bom.version>
+    <log4j2.version>2.25.5</log4j2.version>
   </properties>
 
   <dependencies>
@@ -35,6 +37,12 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <dependency>

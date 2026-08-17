@@ -30,6 +30,25 @@ the containing parent is the authorized host boundary. Orientation does not emit
 scene or current-position payloads spontaneously.
 It does not expose the map surface or any provider/domain objects globally.
 
+## `orientation.spatial-research-bundle` 1.0
+
+The first standalone-product acquisition contract is defined by
+[`orientation-spatial-research-v1.schema.json`](orientation-spatial-research-v1.schema.json).
+Its stable schema identifier is
+`https://schemas.wgt-system.org/orientation/spatial-research/1.0/schema.json`.
+
+It carries one explicit radial spatial research question, its criteria, source
+provenance and researched candidates. It is an external acquisition artifact,
+not the persistence model and not a generic research contract shared with other
+bounded contexts.
+
+Canonical synthetic examples live under [`examples/`](examples/). Cross-field
+semantics such as criterion/source references and heuristic/evidence rules are
+also enforced by the backend `SpatialResearchBundleValidator` before any future
+import mutation.
+
+See `docs/17_SPATIAL_RESEARCH_CONTRACT.md` for semantic rules and boundaries.
+
 Concrete versioned schemas belong here only after an implemented consumer/provider scenario establishes the required semantics.
 
 See `docs/08_CONTRACTS.md`.
