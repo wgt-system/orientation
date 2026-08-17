@@ -6,6 +6,7 @@ on:
       - ".github/workflows/valhalla-smoke.yml"
       - ".github/scripts/photon-smoke-stub.py"
       - ".github/scripts/reference-route-browser-smoke.py"
+      - ".github/scripts/screenshot-color-diagnostics.py"
       - "backend/src/main/java/system/wgt/orientation/application/routing/**"
       - "backend/src/main/java/system/wgt/orientation/domain/routing/**"
       - "backend/src/main/java/system/wgt/orientation/host/routing/**"
@@ -23,6 +24,7 @@ on:
       - ".github/workflows/valhalla-smoke.yml"
       - ".github/scripts/photon-smoke-stub.py"
       - ".github/scripts/reference-route-browser-smoke.py"
+      - ".github/scripts/screenshot-color-diagnostics.py"
       - "backend/src/main/java/system/wgt/orientation/application/routing/**"
       - "backend/src/main/java/system/wgt/orientation/domain/routing/**"
       - "backend/src/main/java/system/wgt/orientation/host/routing/**"
@@ -114,6 +116,12 @@ jobs:
           origin = {"longitude": 10.0067, "latitude": 53.5526}
           destination = {"longitude": 9.9921, "latitude": 53.5504}
 
+          def nearby(actual, expected, tolerance=0.02):
+              return (
+                  abs(actual["longitude"] - expected["longitude"]) <= tolerance
+                  and abs(actual["latitude"] - expected["latitude"]) <= tolerance
+              )
+
           for profile in ("DRIVING", "CYCLING", "WALKING"):
               payload = json.dumps({
                   "origin": origin,
@@ -136,11 +144,15 @@ jobs:
               assert route["distanceMeters"] > 0, (profile, route["distanceMeters"])
               assert route["durationSeconds"] > 0, (profile, route["durationSeconds"])
               assert route["profile"] == profile, (profile, route["profile"])
+              assert nearby(geometry[0], origin), (profile, "first", geometry[0], origin)
+              assert nearby(geometry[-1], destination), (profile, "last", geometry[-1], destination)
               print(
                   profile,
                   "points=", len(geometry),
                   "distanceMeters=", route["distanceMeters"],
                   "durationSeconds=", route["durationSeconds"],
+                  "first=", geometry[0],
+                  "last=", geometry[-1],
               )
           PY
 
@@ -177,6 +189,19 @@ jobs:
 
       - name: Run real Reference Host route browser smoke
         run: python3 .github/scripts/reference-route-browser-smoke.py
+
+      - name: Screenshot color diagnostics
+        if: failure()
+        run: python3 .github/scripts/screenshot-color-diagnostics.py /tmp/reference-*.png
+
+      - name: Upload browser smoke screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-route-browser-smoke-${{ github.sha }}
+          path: /tmp/reference-*.png
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Diagnostics
         if: failure()
