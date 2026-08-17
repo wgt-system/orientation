@@ -4,7 +4,9 @@
 
 This repository owns the **Orientation** bounded context in the `wgt-system` organization.
 
-Orientation provides reusable generic geospatial capabilities: discovering spatial objects, exploring them on maps, determining routes, and representing host-supplied current location.
+Orientation is an independently useful local-first personal spatial exploration and mobility context. It also provides reusable generic geospatial capabilities to other accepted bounded contexts and WGT hosts.
+
+Its core capability space is Discover, Explore, Navigate and Current Location. Future accepted slices may add Orientation-owned spatial research prompts/imports, persistent personal spatial collections and deeper mobility planning without changing the bounded-context owner.
 
 ## WGT System Architecture
 
@@ -27,7 +29,7 @@ Do not independently implement a generic capability already owned by another acc
 
 Generic durable opaque cross-device delivery is owned by **Conveyance**.
 
-Generic geospatial/map/geocoding/routing capability is owned by **Orientation**, as accepted by the System Architecture Control Plane in [ADR-0003](https://github.com/wgt-system/architecture/blob/dev/adr/0003-orientation-geospatial-capability-ownership.md).
+Generic geospatial/map/geocoding/routing capability is owned by **Orientation**, as accepted by the System Architecture Control Plane in ADR-0003. Orientation's independent product role and domain-owned external research/import workflow are clarified by the later system architecture decision that supersedes any infrastructure-only reading of ADR-0003.
 
 This does not transfer provider-domain semantics to Orientation. Vocation continues to own Work Location, Opportunity, Company, Posting, External Link and other job-market meaning. WGT continues to own device/platform product integration and presentation.
 
@@ -39,24 +41,40 @@ Do not make runtime code depend on the architecture repository.
 
 Orientation owns:
 
+- personal spatial discovery/research semantics introduced by accepted Orientation product slices;
+- Orientation-owned prompt/import contracts for external spatial research;
+- validated imported spatial research, provenance and persistent personal spatial collections when implemented;
 - generic spatial geometry and spatial-feature representation;
 - map scene/composition and renderer lifecycle;
 - generic map layers, clustering, selection and hit testing;
 - basemap/tile/style/provider integration;
 - generic geocoding and reverse geocoding;
-- generic place/POI discovery when a concrete accepted slice introduces it;
+- generic place/POI discovery;
 - generic routing, route geometry, distance/duration and directions;
 - generic current-position and accuracy representation;
+- generic mobility-planning semantics and mobility-provider adapters introduced by accepted slices;
 - geospatial provider adapters, technical caching, rate/failure handling and performance policy.
 
 Orientation does not own:
 
 - foreign business semantics or authoritative state;
 - another bounded context's persistence;
-- WGT product navigation or domain-screen meaning;
+- WGT product-shell/navigation meaning;
 - operating-system permission policy;
 - installation trust;
-- generic durable cross-device delivery.
+- generic durable cross-device delivery;
+- a universal business-entity catalog;
+- a generic prompt/LLM execution platform merely because Orientation generates domain-specific prompts.
+
+## External research / prompt rules
+
+Orientation may generate prompts intended for external ChatGPT/research workflows and import the resulting structured JSON through Orientation-owned versioned contracts.
+
+- Prompt semantics, requested fields, validation, provenance and import translation belong to Orientation when they create Orientation-owned spatial data.
+- External generated data is evidence/input, not automatically authoritative truth.
+- User-supplied research criteria may be represented explicitly, but heuristics must not be silently converted into asserted sensitive personal characteristics.
+- Do not introduce a paid LLM API, generic AI gateway or generic research microservice unless a concrete requirement and System Architecture decision justify one.
+- Shared non-semantic mechanics may later be extracted as utilities/libraries; domain prompt/import contracts remain with their owning bounded context.
 
 ## Cross-context rules
 
@@ -66,6 +84,7 @@ Orientation does not own:
 - Rich marker content may carry provider-owned labels, information and external resources, but Orientation must not reinterpret their business meaning.
 - A provider may call Orientation (for example Vocation -> geocoding -> Vocation) when the provider must interpret the generic result.
 - WGT may compose provider data with Orientation when the operation is product presentation/orchestration rather than provider-domain interpretation.
+- Orientation and Vocation remain separate bounded contexts; shared geographic use cases are integration, not evidence that their domain models should merge.
 - Do not preserve legacy generic map/geocoding duplication merely for compatibility after an Orientation replacement has passed its migration gates.
 
 ## Architecture and dependency rules
@@ -76,11 +95,11 @@ Use dependency direction:
 
 `domain <- application <- adapters/infrastructure <- host`
 
-Domain must not depend on Spring, HTTP clients, persistence, Valhalla, providers or map rendering.
+Domain must not depend on Spring, HTTP clients, persistence technology, Valhalla, third-party providers or map rendering.
 
-Application defines ports. Provider adapters implement those ports.
+Application defines ports. Provider/persistence/import adapters implement those ports.
 
-Do not add persistence until a concrete stateful requirement justifies it.
+Persistence is allowed when a concrete Orientation-owned stateful capability requires it. It must not become a copied database of foreign-domain state.
 
 ### Map surface
 
@@ -88,11 +107,13 @@ The reusable map surface is framework-independent TypeScript. Do not make React,
 
 MapLibre GL JS is infrastructure. Scene/input/output contracts must not expose MapLibre-specific objects to consumers.
 
-Map interaction should emit generic events/references. The host decides product/domain navigation and external-resource execution.
+Map interaction should emit generic events/references. A host decides product/domain navigation and external-resource execution where that meaning is host/provider-owned.
 
-### Routing
+### Routing and mobility
 
 Valhalla is an external engine behind an Orientation-owned adapter. Do not fork/vendor Valhalla source into this repository without a separate explicit decision.
+
+The released v0.3.0 travel profiles are DRIVING/CYCLING/WALKING. Public transit, time-aware routing, shared mobility and multimodal planning require explicit future slices and appropriate provider/data boundaries; do not fake them through the existing profile model.
 
 ## Current technology baseline
 
@@ -108,9 +129,11 @@ Exact dependency versions are repository implementation facts and may be updated
 
 ## UI status
 
-Any Orientation standalone/browser UI is a **reference/development/debug host**, not the primary WGT product UI.
+The current **Reference Host** and **Embed Host** retain their existing roles: the Reference Host is a development/acceptance surface and the Embed Host is a reusable host boundary.
 
-It should still be coherent and visually useful because it is the primary independent validation surface for Orientation capabilities.
+This does **not** mean every Orientation standalone/browser UI must remain a debug host forever. A first-class standalone Orientation end-user application is legitimate and expected once an accepted product slice requires it. WGT may also present Orientation on Windows/iPhone without becoming owner of Orientation semantics.
+
+Do not turn the reusable map package itself into a product-specific UI framework.
 
 ## Branch and worker workflow
 

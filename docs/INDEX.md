@@ -15,5 +15,6 @@
 13. [Threat Model](13_THREAT_MODEL.md)
 14. [Repository Alignment](14_REPOSITORY_ALIGNMENT.md)
 15. [Repository Bootstrap](15_REPOSITORY_BOOTSTRAP.md)
+16. [Product Direction after v0.3.0](16_PRODUCT_DIRECTION.md)
 
 ADRs live under [`docs/adr/`](adr/).
