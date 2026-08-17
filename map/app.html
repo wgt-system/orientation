@@ -134,19 +134,34 @@
             <p id="route-origin-status" class="status">No start selected.</p>
             <ol id="route-origin-results" class="place-results"></ol>
             <label>
-              Travel profile
+              Travel mode
               <select id="route-profile">
                 <option value="DRIVING">Driving</option>
                 <option value="CYCLING">Cycling</option>
                 <option value="WALKING">Walking</option>
+                <option value="TRANSIT">Public transit</option>
               </select>
             </label>
+            <div id="journey-time-controls" class="journey-time-controls" hidden>
+              <label>
+                Time preference
+                <select id="journey-time-mode">
+                  <option value="DEPART_AT">Depart at</option>
+                  <option value="ARRIVE_BY">Arrive by</option>
+                </select>
+              </label>
+              <label>
+                Local date and time
+                <input id="journey-time" type="datetime-local" required />
+              </label>
+            </div>
             <div class="route-actions">
               <button id="request-route" type="button" disabled>Route</button>
               <button id="clear-route" class="secondary" type="button" disabled>Clear</button>
             </div>
             <p id="route-status" class="status" role="status" aria-live="polite">No route requested.</p>
             <div id="route-summary" class="route-summary" hidden></div>
+            <div id="journey-results" class="journey-results" hidden aria-label="Public-transit journey alternatives"></div>
           </section>
           <section id="candidate-detail" class="candidate-detail card" hidden aria-labelledby="candidate-detail-title">
             <p class="kicker">Evidence</p>

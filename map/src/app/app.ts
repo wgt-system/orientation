@@ -18,6 +18,14 @@ import {
   type ResearchPromptRequest,
 } from "./discovery-api";
 import { candidateToSpatialFeature } from "./discovery-feature";
+import {
+  JourneyApiError,
+  requestJourneys,
+  toJourneyOverlay,
+  type Journey,
+  type JourneyEventTime,
+  type JourneyTimeMode,
+} from "./journey-api";
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -59,10 +67,14 @@ const routeOriginSearch = required<HTMLButtonElement>("#route-origin-search");
 const routeOriginStatus = required<HTMLElement>("#route-origin-status");
 const routeOriginResults = required<HTMLOListElement>("#route-origin-results");
 const routeProfile = required<HTMLSelectElement>("#route-profile");
+const journeyTimeControls = required<HTMLElement>("#journey-time-controls");
+const journeyTimeMode = required<HTMLSelectElement>("#journey-time-mode");
+const journeyTime = required<HTMLInputElement>("#journey-time");
 const requestRouteButton = required<HTMLButtonElement>("#request-route");
 const clearRouteButton = required<HTMLButtonElement>("#clear-route");
 const routeStatus = required<HTMLElement>("#route-status");
 const routeSummary = required<HTMLElement>("#route-summary");
+const journeyResults = required<HTMLElement>("#journey-results");
 const candidateDetail = required<HTMLElement>("#candidate-detail");
 const candidateDetailTitle = required<HTMLElement>("#candidate-detail-title");
 const candidateLocation = required<HTMLElement>("#candidate-location");
@@ -78,13 +90,19 @@ let importAbort: AbortController | undefined;
 let collectionAbort: AbortController | undefined;
 let originAbort: AbortController | undefined;
 let routeAbort: AbortController | undefined;
+let journeyAbort: AbortController | undefined;
 let routePending = false;
+let journeyPending = false;
 let routeRendered = false;
+let journeyRendered = false;
+let journeyAlternatives: readonly Journey[] = [];
+let selectedJourneyIndex: number | undefined;
 let promptRequest = 0;
 let importRequest = 0;
 let collectionRequest = 0;
 let originRequest = 0;
 let routeRequestSequence = 0;
+let journeyRequestSequence = 0;
 
 const surface = new OrientationMapSurface(mapContainer, {
   onFeatureSelected: (event) => selectFromMap(event),
@@ -96,7 +114,9 @@ const surface = new OrientationMapSurface(mapContainer, {
 surface.setScene({ features: [] });
 
 addCriterion();
+setDefaultJourneyTime();
 void refreshCollections();
+updateNavigationMode();
 updateRouteControls();
 
 addCriterionButton.addEventListener("click", () => addCriterion());
@@ -117,9 +137,14 @@ routeOriginQuery.addEventListener("keydown", (event) => {
     void searchRouteOrigin();
   }
 });
-routeProfile.addEventListener("change", () => invalidateRoute("Travel profile changed. Request the route again."));
-requestRouteButton.addEventListener("click", () => void requestSelectedRoute());
-clearRouteButton.addEventListener("click", () => clearRoute("No route requested."));
+routeProfile.addEventListener("change", () => {
+  invalidateNavigation("Travel mode changed. Request navigation again.");
+  updateNavigationMode();
+});
+journeyTimeMode.addEventListener("change", () => invalidateJourneyTime());
+journeyTime.addEventListener("change", () => invalidateJourneyTime());
+requestRouteButton.addEventListener("click", () => void requestSelectedNavigation());
+clearRouteButton.addEventListener("click", () => clearNavigation("No navigation requested."));
 
 function addCriterion(description = "", mode: EvaluationMode = "EVIDENCE_REQUIRED"): void {
   const row = document.createElement("div");
@@ -297,7 +322,7 @@ async function refreshCollections(openCollectionId?: string): Promise<void> {
       currentCollection = undefined;
       selectedCandidate = undefined;
       surface.setScene({ features: [] });
-      updateRouteControls();
+      clearNavigation("No navigation requested.");
       return;
     }
     setStatus(collectionsStatus, `${collectionSummaries.length} saved collection${collectionSummaries.length === 1 ? "" : "s"}.`, "success");
@@ -344,7 +369,7 @@ async function openCollection(collectionId: string): Promise<void> {
     selectedCandidate = undefined;
     candidateFilter.value = "";
     candidateSort.value = "research";
-    clearRoute("No route requested.");
+    clearNavigation("No navigation requested.");
     renderCollectionList();
     renderCollection(detail);
     setStatus(collectionsStatus, "Collection open.", "success");
@@ -419,7 +444,7 @@ function selectFromMap(event: SpatialFeatureSelectedEvent): void {
 
 function selectCandidate(candidate: DiscoveryCandidate, focusMap: boolean): void {
   selectedCandidate = candidate;
-  invalidateRoute("Destination changed. Request the route again.");
+  invalidateNavigation("Destination changed. Request navigation again.");
   selectedDestination.textContent = candidate.researchedLocation.coordinate
     ? `${candidate.displayName} · ${candidate.researchedLocation.label}`
     : `${candidate.displayName} has no researched coordinate and cannot be routed yet.`;
@@ -523,7 +548,7 @@ function renderOriginResults(places: readonly Place[]): void {
       routeOrigin = place;
       routeOriginResults.replaceChildren();
       setStatus(routeOriginStatus, `Selected: ${place.displayLabel}`, "success");
-      invalidateRoute("Start changed. Request the route again.");
+      invalidateNavigation("Start changed. Request navigation again.");
       updateRouteControls();
     });
     item.append(button);
@@ -531,10 +556,21 @@ function renderOriginResults(places: readonly Place[]): void {
   }
 }
 
+async function requestSelectedNavigation(): Promise<void> {
+  if (routeProfile.value === "TRANSIT") {
+    await requestSelectedJourney();
+    return;
+  }
+  await requestSelectedRoute();
+}
+
 async function requestSelectedRoute(): Promise<void> {
   const origin = routeOrigin;
   const destination = selectedCandidate?.researchedLocation.coordinate;
-  if (!origin || !destination || routePending) return;
+  if (!origin || !destination || routePending || journeyPending || !isDirectProfile(routeProfile.value)) return;
+
+  cancelJourneyRequest();
+  clearJourneyPresentation();
   routeAbort?.abort();
   const controller = new AbortController();
   routeAbort = controller;
@@ -545,7 +581,7 @@ async function requestSelectedRoute(): Promise<void> {
   updateRouteControls();
   try {
     const route = await requestRoute(
-      { origin: origin.coordinate, destination, profile: routeProfile.value as TravelProfile },
+      { origin: origin.coordinate, destination, profile: routeProfile.value },
       { signal: controller.signal },
     );
     if (sequence !== routeRequestSequence) return;
@@ -568,35 +604,202 @@ async function requestSelectedRoute(): Promise<void> {
   }
 }
 
-function clearRoute(message: string): void {
-  routeAbort?.abort();
-  routeAbort = undefined;
-  routeRequestSequence += 1;
-  routePending = false;
+async function requestSelectedJourney(): Promise<void> {
+  const origin = routeOrigin;
+  const destination = selectedCandidate?.researchedLocation.coordinate;
+  if (!origin || !destination || routePending || journeyPending) return;
+
+  let time: string;
+  try {
+    time = localDateTimeToOffsetIso(journeyTime.value);
+  } catch (error) {
+    setStatus(routeStatus, error instanceof Error ? error.message : "Choose a valid local date and time.", "error");
+    return;
+  }
+
+  cancelRouteRequest();
+  clearRoutePresentation();
+  journeyAbort?.abort();
+  const controller = new AbortController();
+  journeyAbort = controller;
+  const sequence = ++journeyRequestSequence;
+  journeyPending = true;
+  clearJourneyPresentation();
+  setStatus(routeStatus, "Finding public-transit journeys…");
+  updateRouteControls();
+  try {
+    const plan = await requestJourneys(
+      {
+        origin: origin.coordinate,
+        destination,
+        timeMode: journeyTimeMode.value as JourneyTimeMode,
+        time,
+      },
+      { signal: controller.signal },
+    );
+    if (sequence !== journeyRequestSequence) return;
+    journeyAlternatives = plan.journeys;
+    renderJourneyAlternatives();
+    setStatus(
+      routeStatus,
+      `${plan.journeys.length} public-transit journey${plan.journeys.length === 1 ? "" : "s"} found. Select one to show it on the map.`,
+      "success",
+    );
+  } catch (error) {
+    if (controller.signal.aborted || sequence !== journeyRequestSequence) return;
+    clearJourneyPresentation();
+    setStatus(
+      routeStatus,
+      error instanceof JourneyApiError ? error.message : "Public-transit planning is temporarily unavailable.",
+      "error",
+    );
+  } finally {
+    if (sequence === journeyRequestSequence) {
+      journeyPending = false;
+      if (journeyAbort === controller) journeyAbort = undefined;
+      updateRouteControls();
+    }
+  }
+}
+
+function renderJourneyAlternatives(): void {
+  journeyResults.replaceChildren();
+  journeyResults.hidden = !journeyAlternatives.length;
+  journeyAlternatives.forEach((journey, index) => {
+    const card = document.createElement("article");
+    card.className = "journey-alternative";
+    card.dataset.journeyIndex = String(index);
+    card.setAttribute("aria-current", String(index === selectedJourneyIndex));
+
+    const header = document.createElement("div");
+    header.className = "journey-alternative-header";
+    const summary = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${formatClock(journey.departureTime)} → ${formatClock(journey.arrivalTime)} · ${formatDuration(journey.durationSeconds)}`;
+    const meta = document.createElement("span");
+    meta.textContent = `${journey.transfers} transfer${journey.transfers === 1 ? "" : "s"} · ${journey.legs.length} leg${journey.legs.length === 1 ? "" : "s"}`;
+    summary.append(title, meta);
+    const select = document.createElement("button");
+    select.type = "button";
+    select.className = index === selectedJourneyIndex ? "secondary selected" : "secondary";
+    select.textContent = index === selectedJourneyIndex ? "Shown on map" : "Show on map";
+    select.addEventListener("click", () => selectJourneyAlternative(index));
+    header.append(summary, select);
+    card.append(header);
+
+    const legs = document.createElement("ol");
+    legs.className = "journey-leg-list";
+    for (const leg of journey.legs) {
+      const item = document.createElement("li");
+      item.className = `journey-leg ${leg.mode === "WALK" ? "walk" : "transit"}`;
+      const legTitle = document.createElement("strong");
+      legTitle.textContent = leg.mode === "WALK"
+        ? `Walk · ${formatDuration(leg.durationSeconds)}`
+        : `${leg.transitService?.label ?? modeLabel(leg.mode)}${leg.transitService?.headsign ? ` → ${leg.transitService.headsign}` : ""}`;
+      const stops = document.createElement("span");
+      stops.textContent = `${leg.origin.name} → ${leg.destination.name}`;
+      const timing = document.createElement("small");
+      timing.textContent = legTimingLabel(leg.departure, leg.arrival);
+      item.append(legTitle, stops, timing);
+      legs.append(item);
+    }
+    card.append(legs);
+    journeyResults.append(card);
+  });
+}
+
+function selectJourneyAlternative(index: number): void {
+  const journey = journeyAlternatives[index];
+  if (!journey) return;
+  cancelRouteRequest();
+  clearRoutePresentation();
+  surface.setJourney(toJourneyOverlay(journey));
+  journeyRendered = true;
+  selectedJourneyIndex = index;
+  renderJourneyAlternatives();
+  setStatus(routeStatus, `Journey ${index + 1} shown on the map.`, "success");
+  updateRouteControls();
+}
+
+function clearNavigation(message: string): void {
+  cancelRouteRequest();
+  cancelJourneyRequest();
   surface.clearRoute();
+  surface.clearJourney();
   routeRendered = false;
+  journeyRendered = false;
   routeSummary.hidden = true;
+  journeyAlternatives = [];
+  selectedJourneyIndex = undefined;
+  journeyResults.replaceChildren();
+  journeyResults.hidden = true;
   setStatus(routeStatus, message);
   updateRouteControls();
 }
 
-function invalidateRoute(message: string): void {
-  const active = routePending || routeRendered;
-  routeAbort?.abort();
-  routeAbort = undefined;
-  routeRequestSequence += 1;
-  routePending = false;
-  if (routeRendered) surface.clearRoute();
+function invalidateNavigation(message: string): void {
+  const active = routePending || journeyPending || routeRendered || journeyRendered || journeyAlternatives.length > 0;
+  cancelRouteRequest();
+  cancelJourneyRequest();
+  surface.clearRoute();
+  surface.clearJourney();
   routeRendered = false;
+  journeyRendered = false;
   routeSummary.hidden = true;
+  journeyAlternatives = [];
+  selectedJourneyIndex = undefined;
+  journeyResults.replaceChildren();
+  journeyResults.hidden = true;
   if (active) setStatus(routeStatus, message);
   updateRouteControls();
 }
 
+function invalidateJourneyTime(): void {
+  if (routeProfile.value !== "TRANSIT") return;
+  invalidateNavigation("Journey time changed. Request public-transit journeys again.");
+}
+
+function cancelRouteRequest(): void {
+  routeAbort?.abort();
+  routeAbort = undefined;
+  routeRequestSequence += 1;
+  routePending = false;
+}
+
+function cancelJourneyRequest(): void {
+  journeyAbort?.abort();
+  journeyAbort = undefined;
+  journeyRequestSequence += 1;
+  journeyPending = false;
+}
+
+function clearRoutePresentation(): void {
+  if (routeRendered) surface.clearRoute();
+  routeRendered = false;
+  routeSummary.hidden = true;
+}
+
+function clearJourneyPresentation(): void {
+  if (journeyRendered) surface.clearJourney();
+  journeyRendered = false;
+  journeyAlternatives = [];
+  selectedJourneyIndex = undefined;
+  journeyResults.replaceChildren();
+  journeyResults.hidden = true;
+}
+
+function updateNavigationMode(): void {
+  const transit = routeProfile.value === "TRANSIT";
+  journeyTimeControls.hidden = !transit;
+  requestRouteButton.textContent = transit ? "Find journeys" : "Route";
+}
+
 function updateRouteControls(): void {
   const destinationAvailable = Boolean(selectedCandidate?.researchedLocation.coordinate);
-  requestRouteButton.disabled = !routeOrigin || !destinationAvailable || routePending;
-  clearRouteButton.disabled = !routeRendered && !routePending;
+  const pending = routePending || journeyPending;
+  const timeAvailable = routeProfile.value !== "TRANSIT" || Boolean(journeyTime.value);
+  requestRouteButton.disabled = !routeOrigin || !destinationAvailable || !timeAvailable || pending;
+  clearRouteButton.disabled = !routeRendered && !journeyRendered && !journeyAlternatives.length && !pending;
 }
 
 function renderRouteSummary(origin: string, destination: string, distanceMeters: number, durationSeconds: number, profile: TravelProfile): void {
@@ -608,6 +811,41 @@ function renderRouteSummary(origin: string, destination: string, distanceMeters:
   mode.textContent = profile[0] + profile.slice(1).toLowerCase();
   routeSummary.replaceChildren(title, endpoints, mode);
   routeSummary.hidden = false;
+}
+
+function setDefaultJourneyTime(): void {
+  const value = new Date(Date.now() + 10 * 60_000);
+  value.setSeconds(0, 0);
+  journeyTime.value = `${value.getFullYear()}-${two(value.getMonth() + 1)}-${two(value.getDate())}T${two(value.getHours())}:${two(value.getMinutes())}`;
+}
+
+function localDateTimeToOffsetIso(value: string): string {
+  if (!value.trim()) throw new Error("Choose a local date and time.");
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) throw new Error("Choose a valid local date and time.");
+  const offsetMinutes = -parsed.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absoluteOffset = Math.abs(offsetMinutes);
+  return `${parsed.getFullYear()}-${two(parsed.getMonth() + 1)}-${two(parsed.getDate())}T${two(parsed.getHours())}:${two(parsed.getMinutes())}:${two(parsed.getSeconds())}${sign}${two(Math.floor(absoluteOffset / 60))}:${two(absoluteOffset % 60)}`;
+}
+
+function legTimingLabel(departure: JourneyEventTime, arrival: JourneyEventTime): string {
+  const effective = `${formatClock(departure.realtimeTime ?? departure.scheduledTime)} → ${formatClock(arrival.realtimeTime ?? arrival.scheduledTime)}`;
+  const realtime = departure.realtimeTime !== null || arrival.realtimeTime !== null;
+  if (!realtime) return `${effective} · scheduled`;
+  return `${effective} · realtime adjusted (scheduled ${formatClock(departure.scheduledTime)} → ${formatClock(arrival.scheduledTime)})`;
+}
+
+function modeLabel(mode: string): string {
+  return mode
+    .toLowerCase()
+    .split("_")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function isDirectProfile(value: string): value is TravelProfile {
+  return value === "DRIVING" || value === "CYCLING" || value === "WALKING";
 }
 
 function setStatus(element: HTMLElement, message: string, kind?: "success" | "error"): void {
@@ -633,6 +871,11 @@ function formatDate(value: string): string {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
 }
 
+function formatClock(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(meters < 10_000 ? 1 : 0)} km`;
 }
@@ -645,6 +888,10 @@ function formatDuration(seconds: number): string {
   return remainder ? `${hours} h ${remainder} min` : `${hours} h`;
 }
 
+function two(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
 window.addEventListener(
   "beforeunload",
   () => {
@@ -653,6 +900,7 @@ window.addEventListener(
     collectionAbort?.abort();
     originAbort?.abort();
     routeAbort?.abort();
+    journeyAbort?.abort();
     surface.destroy();
   },
   { once: true },
