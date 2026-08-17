@@ -217,6 +217,23 @@ export function validateScene(scene: SpatialScene): void {
   }
 }
 
+export function resolveCoordinateBounds(coordinates: readonly Coordinate[]): ResolvedViewportBounds {
+  if (!Array.isArray(coordinates) || coordinates.length === 0 || !coordinates.every(isCoordinate)) {
+    throw new Error("Coordinate bounds require at least one valid coordinate.");
+  }
+
+  const latitudes = coordinates.map((coordinate) => coordinate.latitude);
+  const longitudes = coordinates.map((coordinate) => coordinate.longitude);
+  const longitudeBounds = resolveMinimalLongitudeSpan(longitudes);
+
+  return {
+    west: longitudeBounds.start,
+    south: Math.min(...latitudes),
+    east: longitudeBounds.end,
+    north: Math.max(...latitudes),
+  };
+}
+
 export function resolveViewport(scene: SpatialScene): ResolvedViewport {
   validateScene(scene);
 
@@ -236,18 +253,9 @@ export function resolveViewport(scene: SpatialScene): ResolvedViewport {
     };
   }
 
-  const latitudes = scene.features.map((feature) => feature.coordinate.latitude);
-  const longitudes = scene.features.map((feature) => feature.coordinate.longitude);
-  const longitudeBounds = resolveMinimalLongitudeSpan(longitudes);
-
   return {
     kind: "fit",
-    bounds: {
-      west: longitudeBounds.start,
-      south: Math.min(...latitudes),
-      east: longitudeBounds.end,
-      north: Math.max(...latitudes),
-    },
+    bounds: resolveCoordinateBounds(scene.features.map((feature) => feature.coordinate)),
     padding: scene.viewport?.padding ?? 48,
     maxZoom: scene.viewport?.maxZoom ?? 14,
   };
@@ -266,6 +274,10 @@ function resolveMinimalLongitudeSpan(longitudes: readonly number[]): Readonly<{ 
       largestGap = gap;
       largestGapIndex = index;
     }
+  }
+
+  if (largestGapIndex === sorted.length - 1) {
+    return { start: sorted[0]!, end: sorted[sorted.length - 1]! };
   }
 
   const startIndex = (largestGapIndex + 1) % sorted.length;
