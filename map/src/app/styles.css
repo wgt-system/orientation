@@ -38,6 +38,7 @@ input:focus, textarea:focus, select:focus { border-color: #69aaa5; box-shadow: 0
 button { border: 1px solid #5eaba4; border-radius: 9px; background: #5eaba4; color: #06100f; padding: 9px 12px; font-weight: 700; }
 button:hover:not(:disabled) { filter: brightness(1.08); }
 button.secondary { background: transparent; color: #cfe2e0; border-color: #3b585c; }
+button.secondary.selected { border-color: #6bb9b1; background: #15252a; }
 
 .status { min-height: 1.15em; margin: 10px 0 0; color: #a7b4c0; font-size: 0.84rem; }
 .status.error { color: #ef9f9f; }
@@ -67,6 +68,18 @@ button.secondary { background: transparent; color: #cfe2e0; border-color: #3b585
 .selected-destination { margin: 0; color: #c8d2dc; }
 .route-summary { display: grid; gap: 2px; padding: 10px 12px; border-radius: 9px; background: #0d161c; border: 1px solid #2c454a; }
 .route-summary span, .route-summary small { color: #9aa8b5; }
+.journey-time-controls { display: grid; grid-template-columns: minmax(130px, 0.7fr) minmax(190px, 1.3fr); gap: 8px; }
+.journey-results { display: grid; gap: 10px; margin-top: 2px; }
+.journey-alternative { display: grid; gap: 10px; border: 1px solid #2b3948; border-radius: 10px; background: #0e161f; padding: 11px; }
+.journey-alternative[aria-current="true"] { border-color: #6bb9b1; background: #122126; }
+.journey-alternative-header { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.journey-alternative-header > div { display: grid; gap: 3px; }
+.journey-alternative-header span { color: #93a1ae; font-size: 0.78rem; }
+.journey-leg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.journey-leg { position: relative; display: grid; gap: 2px; padding: 8px 9px 8px 14px; border-left: 3px solid #2f6f8f; background: #0b131a; border-radius: 0 8px 8px 0; }
+.journey-leg.walk { border-left-style: dashed; border-left-color: #69aaa5; }
+.journey-leg strong { font-size: 0.82rem; }
+.journey-leg span, .journey-leg small { color: #9aa8b5; font-size: 0.76rem; }
 
 .candidate-detail h2 { margin-bottom: 5px; }
 .claim-grid { display: grid; gap: 8px; margin-top: 14px; }
@@ -100,5 +113,6 @@ button.secondary { background: transparent; color: #cfe2e0; border-color: #3b585
 @media (max-width: 500px) {
   .card { padding: 14px; }
   .criterion-row { grid-template-columns: 1fr 100px 32px; }
-  .inline-control { grid-template-columns: 1fr; }
+  .inline-control, .journey-time-controls { grid-template-columns: 1fr; }
+  .journey-alternative-header { align-items: stretch; flex-direction: column; }
 }
