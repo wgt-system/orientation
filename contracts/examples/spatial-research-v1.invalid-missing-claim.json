@@ -1,0 +1,50 @@
+{
+  "contract": "orientation.spatial-research-bundle",
+  "version": "1.0",
+  "researchedAt": "2026-08-17T18:30:00Z",
+  "question": {
+    "questionRef": "missing-claim-invalid",
+    "text": "Synthetic invalid missing-claim example.",
+    "area": {
+      "center": {"label": "Hamburg"},
+      "radiusMeters": 1000
+    },
+    "criteria": [
+      {
+        "criterionRef": "criterion-a",
+        "description": "First criterion.",
+        "evaluationMode": "EVIDENCE_REQUIRED"
+      },
+      {
+        "criterionRef": "criterion-b",
+        "description": "Second criterion.",
+        "evaluationMode": "EVIDENCE_REQUIRED"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "sourceRef": "source-1",
+      "url": "https://example.org/source",
+      "retrievedAt": "2026-08-17T18:20:00Z"
+    }
+  ],
+  "candidates": [
+    {
+      "candidateRef": "candidate-1",
+      "displayName": "Synthetic Candidate",
+      "researchedLocation": {
+        "label": "Hamburg",
+        "sourceRefs": ["source-1"]
+      },
+      "claims": [
+        {
+          "criterionRef": "criterion-a",
+          "status": "MATCH",
+          "basis": "DIRECT_EVIDENCE",
+          "sourceRefs": ["source-1"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "contract": "orientation.spatial-research-bundle",
+  "version": "1.0",
+  "researchedAt": "2026-08-17T18:30:00Z",
+  "question": {
+    "questionRef": "heuristic-invalid",
+    "text": "Synthetic invalid heuristic example.",
+    "area": {
+      "center": {"label": "Hamburg"},
+      "radiusMeters": 1000
+    },
+    "criteria": [
+      {
+        "criterionRef": "name-pattern",
+        "description": "A user-defined name-pattern heuristic.",
+        "evaluationMode": "HEURISTIC"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "sourceRef": "source-1",
+      "url": "https://example.org/source",
+      "retrievedAt": "2026-08-17T18:20:00Z"
+    }
+  ],
+  "candidates": [
+    {
+      "candidateRef": "candidate-1",
+      "displayName": "Synthetic Candidate",
+      "researchedLocation": {
+        "label": "Hamburg",
+        "sourceRefs": ["source-1"]
+      },
+      "claims": [
+        {
+          "criterionRef": "name-pattern",
+          "status": "MATCH",
+          "basis": "DIRECT_EVIDENCE",
+          "observedValue": "Example Name",
+          "sourceRefs": ["source-1"]
+        }
+      ]
+    }
+  ]
+}
