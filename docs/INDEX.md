@@ -22,5 +22,6 @@
 20. [Standalone Discovery Application](20_STANDALONE_DISCOVERY_APP.md)
 21. [Public-Transit Journey Boundary](21_JOURNEY_BOUNDARY.md)
 22. [MOTIS Journey Provider](22_MOTIS_JOURNEY_PROVIDER.md)
+23. [Journey Map Surface](23_JOURNEY_MAP_SURFACE.md)
 
 ADRs live under [`docs/adr/`](adr/).
