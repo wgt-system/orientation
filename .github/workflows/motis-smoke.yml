@@ -126,11 +126,17 @@ jobs:
         run: |
           set -euo pipefail
           cat /tmp/orientation-motis-smoke/request-metadata.json
-          curl --fail --silent --show-error \
+          status="$(curl --silent --show-error \
             -H 'Content-Type: application/json' \
             --data-binary @/tmp/orientation-motis-smoke/request.json \
-            http://127.0.0.1:8082/api/v1/journeys \
-            --output /tmp/orientation-motis-smoke/response.json
+            --output /tmp/orientation-motis-smoke/response.json \
+            --write-out '%{http_code}' \
+            http://127.0.0.1:8082/api/v1/journeys)"
+          if [ "$status" != "200" ]; then
+            echo "Orientation Journey request returned HTTP $status"
+            cat /tmp/orientation-motis-smoke/response.json
+            exit 1
+          fi
           python3 -m json.tool /tmp/orientation-motis-smoke/response.json | head -n 160
           python3 .github/scripts/motis-journey-smoke.py verify /tmp/orientation-motis-smoke/response.json
 
