@@ -19,5 +19,6 @@
 17. [Spatial Research Contract 1.0](17_SPATIAL_RESEARCH_CONTRACT.md)
 18. [Spatial Research Prompt Generation](18_SPATIAL_RESEARCH_PROMPTS.md)
 19. [Discovery Import and Persistence](19_DISCOVERY_PERSISTENCE.md)
+20. [Standalone Discovery Application](20_STANDALONE_DISCOVERY_APP.md)
 
 ADRs live under [`docs/adr/`](adr/).
