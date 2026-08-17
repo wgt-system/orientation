@@ -91,7 +91,7 @@ public class JourneyController {
             int transfers,
             List<JourneyLegDto> legs) {
         static JourneyDto from(Journey journey) {
-            return new JourneyDto(journey.departureTime(), journey.arrivalTime(), journey.durationSeconds,
+            return new JourneyDto(journey.departureTime(), journey.arrivalTime(), journey.durationSeconds(),
                     journey.transfers(), journey.legs().stream().map(JourneyLegDto::from).toList());
         }
     }
