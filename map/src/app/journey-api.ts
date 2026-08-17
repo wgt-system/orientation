@@ -194,7 +194,12 @@ function parsePlan(payload: unknown): JourneyPlan {
 
 function parseJourney(value: unknown): Journey {
   if (!isRecord(value) || !isTimestamp(value.departureTime) || !isTimestamp(value.arrivalTime)) throw invalidResponse();
-  if (!isNonNegativeNumber(value.durationSeconds) || !Number.isInteger(value.transfers) || value.transfers < 0) throw invalidResponse();
+  if (
+    !isNonNegativeNumber(value.durationSeconds)
+    || typeof value.transfers !== "number"
+    || !Number.isInteger(value.transfers)
+    || value.transfers < 0
+  ) throw invalidResponse();
   if (!Array.isArray(value.legs) || value.legs.length < 1 || value.legs.length > 64) throw invalidResponse();
   const legs = Object.freeze(value.legs.map(parseLeg));
   if (!legs.some((leg) => leg.mode !== "WALK")) throw invalidResponse();
