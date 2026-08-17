@@ -1,0 +1,150 @@
+name: MOTIS Journey Smoke
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/motis-smoke.yml"
+      - ".github/scripts/motis-journey-smoke.py"
+      - "backend/src/main/java/system/wgt/orientation/application/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/host/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
+      - "backend/src/main/resources/application.yaml"
+  push:
+    branches: [dev, main]
+    paths:
+      - ".github/workflows/motis-smoke.yml"
+      - ".github/scripts/motis-journey-smoke.py"
+      - "backend/src/main/java/system/wgt/orientation/application/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/host/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
+      - "backend/src/main/resources/application.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  journey-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MOTIS_VERSION: v2.11.0
+      MOTIS_SHA256: fbe1f512e38d3c04b6b59e342dac545eef311b29a9e4b2a4ca44020e182608ea
+      TEST_DATA_COMMIT: 0724442d93994062ed2c302d5a21c2d1b5e2a89b
+      OSM_BLOB_SHA: 77a8ade06a4f4f92a334083615d06dec90137f45
+      GTFS_BLOB_SHA: 5e62266e725b22f8118c4ece6c8dacd67a2d9b73
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Download and verify pinned MOTIS runtime and test data
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/orientation-motis-smoke/data /tmp/orientation-motis-smoke/runtime
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://github.com/motis-project/motis/releases/download/${MOTIS_VERSION}/motis-x86_64-linux" \
+            --output /tmp/orientation-motis-smoke/runtime/motis
+          echo "${MOTIS_SHA256}  /tmp/orientation-motis-smoke/runtime/motis" | sha256sum --check --strict
+          chmod +x /tmp/orientation-motis-smoke/runtime/motis
+
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://raw.githubusercontent.com/motis-project/test-data/${TEST_DATA_COMMIT}/aachen.osm.pbf" \
+            --output /tmp/orientation-motis-smoke/data/aachen.osm.pbf
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://raw.githubusercontent.com/motis-project/test-data/${TEST_DATA_COMMIT}/AVV_GTFS_Masten_mit_SPNV.zip" \
+            --output /tmp/orientation-motis-smoke/data/avv.gtfs.zip
+
+          test "$(git hash-object /tmp/orientation-motis-smoke/data/aachen.osm.pbf)" = "${OSM_BLOB_SHA}"
+          test "$(git hash-object /tmp/orientation-motis-smoke/data/avv.gtfs.zip)" = "${GTFS_BLOB_SHA}"
+          /tmp/orientation-motis-smoke/runtime/motis version
+
+      - name: Prepare deterministic Journey request from pinned GTFS
+        run: |
+          python3 .github/scripts/motis-journey-smoke.py prepare \
+            /tmp/orientation-motis-smoke/data/avv.gtfs.zip \
+            /tmp/orientation-motis-smoke/request.json \
+            /tmp/orientation-motis-smoke/request-metadata.json
+
+      - name: Import pinned OSM and GTFS into MOTIS
+        working-directory: /tmp/orientation-motis-smoke/runtime
+        run: |
+          set -euo pipefail
+          ./motis config ../data/aachen.osm.pbf ../data/avv.gtfs.zip > /tmp/motis-config.log 2>&1
+          ./motis import > /tmp/motis-import.log 2>&1
+
+      - name: Start pinned MOTIS runtime
+        working-directory: /tmp/orientation-motis-smoke/runtime
+        run: |
+          ./motis server > /tmp/motis-server.log 2>&1 &
+          echo $! > /tmp/motis.pid
+          for attempt in $(seq 1 90); do
+            if (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1; then
+              echo "MOTIS is accepting connections on 8080."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MOTIS did not become reachable within three minutes."
+          cat /tmp/motis-server.log
+          exit 1
+
+      - name: Start Orientation backend against local MOTIS
+        run: |
+          cd backend
+          SERVER_PORT=8082 \
+          ORIENTATION_MOTIS_BASE_URL=http://127.0.0.1:8080 \
+            ./mvnw --batch-mode spring-boot:run > /tmp/orientation-motis.log 2>&1 &
+          echo $! > /tmp/orientation-motis.pid
+
+      - name: Wait for Orientation health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:8082/actuator/health > /tmp/orientation-motis-health.json; then
+              cat /tmp/orientation-motis-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Orientation did not become healthy within two minutes."
+          cat /tmp/orientation-motis.log
+          exit 1
+
+      - name: Plan a real public-transit Journey through Orientation
+        run: |
+          set -euo pipefail
+          cat /tmp/orientation-motis-smoke/request-metadata.json
+          curl --fail --silent --show-error \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/orientation-motis-smoke/request.json \
+            http://127.0.0.1:8082/api/v1/journeys \
+            --output /tmp/orientation-motis-smoke/response.json
+          python3 -m json.tool /tmp/orientation-motis-smoke/response.json | head -n 160
+          python3 .github/scripts/motis-journey-smoke.py verify /tmp/orientation-motis-smoke/response.json
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          echo '=== Request metadata ==='
+          cat /tmp/orientation-motis-smoke/request-metadata.json 2>/dev/null || true
+          echo '=== MOTIS config ==='
+          tail -n 160 /tmp/motis-config.log 2>/dev/null || true
+          echo '=== MOTIS import ==='
+          tail -n 240 /tmp/motis-import.log 2>/dev/null || true
+          echo '=== MOTIS server ==='
+          tail -n 240 /tmp/motis-server.log 2>/dev/null || true
+          echo '=== Orientation ==='
+          tail -n 240 /tmp/orientation-motis.log 2>/dev/null || true
+          echo '=== Journey response ==='
+          cat /tmp/orientation-motis-smoke/response.json 2>/dev/null || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f /tmp/orientation-motis.pid ]; then kill "$(cat /tmp/orientation-motis.pid)" 2>/dev/null || true; fi
+          if [ -f /tmp/motis.pid ]; then kill "$(cat /tmp/motis.pid)" 2>/dev/null || true; fi
