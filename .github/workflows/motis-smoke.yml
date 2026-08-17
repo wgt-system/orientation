@@ -32,9 +32,9 @@ jobs:
     env:
       MOTIS_VERSION: v2.11.0
       MOTIS_ARCHIVE_SHA256: 508505d3f9cd2e872c763743c459cae4e0539fad14bf490e23251e013d3a6dfa
-      TEST_DATA_COMMIT: 0724442d93994062ed2c302d5a21c2d1b5e2a89b
-      OSM_BLOB_SHA: 77a8ade06a4f4f92a334083615d06dec90137f45
-      GTFS_BLOB_SHA: 5e62266e725b22f8118c4ece6c8dacd67a2d9b73
+      TEST_DATA_COMMIT: e2a596045675e12760d77db991b57f1979a998e6
+      OSM_BLOB_SHA: d4f8a764450637f25a687ba2444914a13b087cab
+      GTFS_BLOB_SHA: 8dd7acedd31f961217bf69e4e8bf7d5dae4c8c97
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
