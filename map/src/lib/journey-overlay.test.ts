@@ -40,11 +40,28 @@ describe("Journey overlay model", () => {
 
     const mutable = {
       legs: journey.legs.map((leg) => {
-        const geometry = leg.geometry?.map((coordinate) => ({ ...coordinate }));
+        const origin = {
+          name: leg.origin.name,
+          coordinate: {
+            longitude: leg.origin.coordinate.longitude,
+            latitude: leg.origin.coordinate.latitude,
+          },
+        };
+        const destination = {
+          name: leg.destination.name,
+          coordinate: {
+            longitude: leg.destination.coordinate.longitude,
+            latitude: leg.destination.coordinate.latitude,
+          },
+        };
+        const geometry = leg.geometry?.map((coordinate) => ({
+          longitude: coordinate.longitude,
+          latitude: coordinate.latitude,
+        }));
         return {
-          ...leg,
-          origin: { ...leg.origin, coordinate: { ...leg.origin.coordinate } },
-          destination: { ...leg.destination, coordinate: { ...leg.destination.coordinate } },
+          mode: leg.mode,
+          origin,
+          destination,
           ...(geometry === undefined ? {} : { geometry }),
         };
       }),
