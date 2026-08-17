@@ -1,6 +1,6 @@
-# Orientation – Product Direction after v0.3.0
+# Orientation – Product Direction after v0.4.0
 
-**Status:** v0.4.0 standalone spatial-research and persistent-discovery baseline implemented; release promotion follows the final #24 hardening gate.
+**Status:** v0.4.0 released and accepted on 2026-08-17. Future work remains intentionally unversioned until the next concrete product slice is reviewed.
 
 ## Why this document exists
 
@@ -17,7 +17,7 @@ Orientation is not only reusable infrastructure for Vocation/WGT. It is an indep
 
 ## v0.4.0 baseline
 
-**Focus:** first standalone spatial-research and persistent-discovery product baseline.
+**Focus:** first standalone spatial-research and persistent-discovery product baseline. Released and accepted on 2026-08-17.
 
 The implemented Orientation loop is:
 
