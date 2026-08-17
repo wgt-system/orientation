@@ -1,0 +1,79 @@
+{
+  "contract": "orientation.spatial-research-bundle",
+  "version": "1.0",
+  "researchedAt": "2026-08-17T18:30:00Z",
+  "question": {
+    "questionRef": "hamburg-restaurant-example",
+    "text": "Find restaurants within 5 km whose publicly listed operator name matches my supplied name-pattern heuristic and that have documented vegetarian options.",
+    "area": {
+      "center": {
+        "label": "Hamburg Hauptbahnhof",
+        "coordinate": {
+          "longitude": 10.0067,
+          "latitude": 53.5526
+        }
+      },
+      "radiusMeters": 5000
+    },
+    "criteria": [
+      {
+        "criterionRef": "operator-name-pattern",
+        "description": "Publicly listed operator name matches the user-defined name-pattern heuristic. This is not an ethnicity or nationality claim.",
+        "evaluationMode": "HEURISTIC"
+      },
+      {
+        "criterionRef": "vegetarian-options",
+        "description": "A current menu or official restaurant source documents vegetarian options.",
+        "evaluationMode": "EVIDENCE_REQUIRED"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "sourceRef": "source-official",
+      "url": "https://example.org/restaurant",
+      "title": "Synthetic restaurant website",
+      "retrievedAt": "2026-08-17T18:25:00Z"
+    },
+    {
+      "sourceRef": "source-menu",
+      "url": "https://example.org/restaurant/menu",
+      "title": "Synthetic menu",
+      "retrievedAt": "2026-08-17T18:26:00Z"
+    }
+  ],
+  "candidates": [
+    {
+      "candidateRef": "candidate-1",
+      "displayName": "Example Garden Restaurant",
+      "identity": {
+        "canonicalUri": "https://example.org/restaurant"
+      },
+      "researchedLocation": {
+        "label": "Example Street 1, Hamburg",
+        "coordinate": {
+          "longitude": 10.015,
+          "latitude": 53.56
+        },
+        "sourceRefs": ["source-official"]
+      },
+      "claims": [
+        {
+          "criterionRef": "operator-name-pattern",
+          "status": "MATCH",
+          "basis": "HEURISTIC",
+          "observedValue": "Li Wei",
+          "sourceRefs": ["source-official"],
+          "note": "The public operator name matches the user-supplied name pattern. No ethnicity or nationality is inferred."
+        },
+        {
+          "criterionRef": "vegetarian-options",
+          "status": "MATCH",
+          "basis": "DIRECT_EVIDENCE",
+          "observedValue": true,
+          "sourceRefs": ["source-menu"]
+        }
+      ]
+    }
+  ]
+}
