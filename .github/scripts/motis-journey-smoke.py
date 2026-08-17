@@ -11,11 +11,11 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 
-AACHEN_FIXTURE_BOUNDS = {
-    "south": 50.6,
-    "north": 50.9,
-    "west": 5.9,
-    "east": 6.3,
+AACHEN_CITY_BOUNDS = {
+    "south": 50.70,
+    "north": 50.85,
+    "west": 6.00,
+    "east": 6.20,
 }
 
 
@@ -42,15 +42,17 @@ def parse_gtfs_time(value: str) -> timedelta:
     return timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
 
-def inside_aachen_fixture(stop: dict[str, str]) -> bool:
+def is_aachen_city_stop(stop: dict[str, str]) -> bool:
     try:
         latitude = float(stop["stop_lat"])
         longitude = float(stop["stop_lon"])
     except (KeyError, TypeError, ValueError):
         return False
+    name = (stop.get("stop_name") or "").casefold()
     return (
-        AACHEN_FIXTURE_BOUNDS["south"] <= latitude <= AACHEN_FIXTURE_BOUNDS["north"]
-        and AACHEN_FIXTURE_BOUNDS["west"] <= longitude <= AACHEN_FIXTURE_BOUNDS["east"]
+        "aachen" in name
+        and AACHEN_CITY_BOUNDS["south"] <= latitude <= AACHEN_CITY_BOUNDS["north"]
+        and AACHEN_CITY_BOUNDS["west"] <= longitude <= AACHEN_CITY_BOUNDS["east"]
     )
 
 
@@ -136,7 +138,7 @@ def prepare(gtfs_zip: str, request_path: str, metadata_path: str):
                 row
                 for row in stop_times
                 if row.get("stop_id") in stops
-                and inside_aachen_fixture(stops[row["stop_id"]])
+                and is_aachen_city_stop(stops[row["stop_id"]])
                 and (row.get("departure_time") or row.get("arrival_time"))
             ]
             if len(usable) < 2:
@@ -153,7 +155,7 @@ def prepare(gtfs_zip: str, request_path: str, metadata_path: str):
             break
 
         if chosen is None:
-            raise RuntimeError("GTFS fixture has no usable active trip inside the Aachen OSM fixture")
+            raise RuntimeError("GTFS fixture has no usable active trip between two Aachen-city stops")
 
         trip, service_id, first, last, first_time, last_time = chosen
         service_date = service_dates[service_id]
@@ -177,7 +179,7 @@ def prepare(gtfs_zip: str, request_path: str, metadata_path: str):
             "time": request_time.isoformat(),
         }
         metadata = {
-            "fixtureArea": "Aachen",
+            "fixtureArea": "Aachen city",
             "agencyTimezone": timezone_name,
             "serviceDate": service_date.isoformat(),
             "serviceId": service_id,
