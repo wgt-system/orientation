@@ -157,7 +157,9 @@ jobs:
             cat /tmp/orientation-motis-smoke/response.json
             exit 1
           fi
-          python3 -m json.tool /tmp/orientation-motis-smoke/response.json | head -n 160
+          python3 -m json.tool /tmp/orientation-motis-smoke/response.json \
+            > /tmp/orientation-motis-smoke/response.pretty.json
+          head -n 160 /tmp/orientation-motis-smoke/response.pretty.json
           python3 .github/scripts/motis-journey-smoke.py verify /tmp/orientation-motis-smoke/response.json
 
       - name: Diagnostics
