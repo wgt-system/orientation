@@ -39,12 +39,15 @@ describe("Journey overlay model", () => {
     expect(() => validateJourneyOverlay(journey)).not.toThrow();
 
     const mutable = {
-      legs: journey.legs.map((leg) => ({
-        ...leg,
-        origin: { ...leg.origin, coordinate: { ...leg.origin.coordinate } },
-        destination: { ...leg.destination, coordinate: { ...leg.destination.coordinate } },
-        geometry: leg.geometry?.map((coordinate) => ({ ...coordinate })),
-      })),
+      legs: journey.legs.map((leg) => {
+        const geometry = leg.geometry?.map((coordinate) => ({ ...coordinate }));
+        return {
+          ...leg,
+          origin: { ...leg.origin, coordinate: { ...leg.origin.coordinate } },
+          destination: { ...leg.destination, coordinate: { ...leg.destination.coordinate } },
+          ...(geometry === undefined ? {} : { geometry }),
+        };
+      }),
     };
     const snapshot = snapshotJourneyOverlay(mutable);
     mutable.legs[0]!.origin.coordinate.longitude = 42;
@@ -104,7 +107,11 @@ describe("Journey overlay model", () => {
     const stopFeatures = collection.features.filter((feature) => feature.properties.kind === "transit-stop");
 
     expect(legFeatures).toHaveLength(2);
-    expect(legFeatures.map((feature) => feature.properties.travelKind)).toEqual(["walk", "transit"]);
+    expect(
+      legFeatures.map((feature) =>
+        "travelKind" in feature.properties ? feature.properties.travelKind : null,
+      ),
+    ).toEqual(["walk", "transit"]);
     expect(stopFeatures).toHaveLength(2);
     expect(collection.features.some((feature) => feature.properties.kind === "origin")).toBe(true);
     expect(collection.features.some((feature) => feature.properties.kind === "destination")).toBe(true);
