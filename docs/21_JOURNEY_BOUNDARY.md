@@ -1,6 +1,6 @@
 # Orientation – Public-Transit Journey Boundary
 
-**Status:** v0.5.0 Issue #40 provider-neutral boundary.
+**Status:** v0.5.0 Issue #40 provider-neutral boundary; first provider supplied by Issue #41.
 
 ADR-0008 defines the accepted architectural split: the released direct `Route` model remains the owner of `DRIVING`, `CYCLING` and `WALKING`; public transport is represented independently as a time-dependent `Journey`.
 
@@ -106,7 +106,9 @@ Stable Journey provider failures are:
 
 The HTTP host maps these to stable Orientation error codes and never returns provider error bodies.
 
-Issue #40 deliberately supplies no production `JourneyPort` bean. `JourneyController` is activated only when a port exists. Issue #41 supplies the first real adapter (MOTIS 2), keeping #40 independently provider-neutral and keeping application bootstrap valid before the provider slice lands.
+Issue #40 deliberately established this boundary without a production provider so it could be accepted independently of infrastructure. Issue #41 supplies the first real `JourneyPort` implementation (MOTIS 2), so the normal application now always wires the Journey controller to that configured provider. Provider availability is still evaluated only when a Journey request is made; MOTIS is not contacted merely to start Orientation.
+
+See [MOTIS Journey Provider](22_MOTIS_JOURNEY_PROVIDER.md) for the first infrastructure implementation.
 
 ## Non-goals
 
