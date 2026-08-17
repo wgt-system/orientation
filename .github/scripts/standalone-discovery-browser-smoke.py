@@ -176,7 +176,7 @@ def reopen_phase(session: str) -> None:
         raise AssertionError(f"Unexpected standalone route summary: {summary}")
 
     click(session, "#clear-route")
-    wait_for(session, "route clear", "return document.querySelector('#route-status')?.textContent === 'No route requested.';")
+    wait_for(session, "route clear", "return document.querySelector('#route-status')?.textContent === 'No navigation requested.';")
     if execute(session, "return document.querySelectorAll('#candidate-list .candidate-button').length;") != 1:
         raise AssertionError("Clearing route corrupted discovery state")
     print("Reopened and routed collection", expected_id)
