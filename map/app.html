@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Orientation</title>
+  </head>
+  <body>
+    <main class="orientation-app">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">WGT SYSTEM · ORIENTATION</p>
+          <h1>Discover places. Keep the evidence. Find the way.</h1>
+        </div>
+        <p class="app-header-copy">Personal spatial research and mobility, stored locally.</p>
+      </header>
+
+      <section class="workspace" aria-label="Orientation discovery workspace">
+        <aside class="research-panel">
+          <section class="card" aria-labelledby="research-title">
+            <div class="section-heading">
+              <div>
+                <p class="kicker">Research</p>
+                <h2 id="research-title">Ask a spatial question</h2>
+              </div>
+            </div>
+            <form id="research-form" class="stack-form">
+              <label>
+                Question
+                <textarea id="research-question" rows="3" required placeholder="Find restaurants within 5 km that match my criteria"></textarea>
+              </label>
+              <div class="form-grid">
+                <label>
+                  Area center
+                  <input id="research-center" required placeholder="Hamburg Hauptbahnhof" />
+                </label>
+                <label>
+                  Radius (km)
+                  <input id="research-radius" type="number" min="0.1" max="500" step="0.1" value="5" required />
+                </label>
+              </div>
+              <fieldset class="criteria-fieldset">
+                <legend>Criteria</legend>
+                <div id="criteria-list" class="criteria-list"></div>
+                <button id="add-criterion" class="secondary" type="button">Add criterion</button>
+              </fieldset>
+              <button id="generate-prompt" type="submit">Generate research prompt</button>
+            </form>
+            <p id="prompt-status" class="status" role="status" aria-live="polite"></p>
+            <div id="prompt-output" class="prompt-output" hidden>
+              <div class="prompt-toolbar">
+                <strong>External research prompt</strong>
+                <button id="copy-prompt" class="secondary" type="button">Copy</button>
+              </div>
+              <textarea id="prompt-text" rows="12" readonly></textarea>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="import-title">
+            <div class="section-heading">
+              <div>
+                <p class="kicker">Import</p>
+                <h2 id="import-title">Add research result</h2>
+              </div>
+            </div>
+            <label>
+              Spatial Research Bundle 1.0 JSON
+              <textarea id="bundle-json" rows="9" placeholder="Paste the JSON returned by external research"></textarea>
+            </label>
+            <button id="import-bundle" type="button">Validate and import</button>
+            <p id="import-status" class="status" role="status" aria-live="polite"></p>
+            <ul id="import-errors" class="error-list"></ul>
+          </section>
+        </aside>
+
+        <section class="collection-panel card" aria-labelledby="collections-title">
+          <div class="section-heading">
+            <div>
+              <p class="kicker">Collections</p>
+              <h2 id="collections-title">Saved discoveries</h2>
+            </div>
+            <button id="refresh-collections" class="secondary" type="button">Refresh</button>
+          </div>
+          <p id="collections-status" class="status" role="status" aria-live="polite"></p>
+          <ol id="collections-list" class="collection-list"></ol>
+
+          <div id="collection-detail" class="collection-detail" hidden>
+            <div class="detail-header">
+              <div>
+                <p id="collection-meta" class="kicker"></p>
+                <h2 id="collection-question"></h2>
+                <p id="collection-area" class="muted"></p>
+              </div>
+            </div>
+            <div class="candidate-tools">
+              <label>
+                Filter candidates
+                <input id="candidate-filter" type="search" placeholder="Name or location" />
+              </label>
+              <label>
+                Sort
+                <select id="candidate-sort">
+                  <option value="research">Research order</option>
+                  <option value="name">Name</option>
+                </select>
+              </label>
+              <button id="show-all-candidates" class="secondary" type="button">Fit mapped candidates</button>
+            </div>
+            <p id="candidate-status" class="status"></p>
+            <ol id="candidate-list" class="candidate-list"></ol>
+          </div>
+        </section>
+
+        <section class="map-panel">
+          <section id="app-map" class="app-map" aria-label="Orientation discovery map">
+            <p id="app-map-status" class="map-status" hidden role="status"></p>
+          </section>
+          <section class="route-card card" aria-labelledby="route-title">
+            <div class="section-heading compact">
+              <div>
+                <p class="kicker">Navigate</p>
+                <h2 id="route-title">Route to selected candidate</h2>
+              </div>
+            </div>
+            <p id="selected-destination" class="selected-destination">Select a mapped candidate.</p>
+            <label>
+              Start
+              <div class="inline-control">
+                <input id="route-origin-query" type="search" placeholder="Search starting place" />
+                <button id="route-origin-search" class="secondary" type="button">Find</button>
+              </div>
+            </label>
+            <p id="route-origin-status" class="status">No start selected.</p>
+            <ol id="route-origin-results" class="place-results"></ol>
+            <label>
+              Travel profile
+              <select id="route-profile">
+                <option value="DRIVING">Driving</option>
+                <option value="CYCLING">Cycling</option>
+                <option value="WALKING">Walking</option>
+              </select>
+            </label>
+            <div class="route-actions">
+              <button id="request-route" type="button" disabled>Route</button>
+              <button id="clear-route" class="secondary" type="button" disabled>Clear</button>
+            </div>
+            <p id="route-status" class="status" role="status" aria-live="polite">No route requested.</p>
+            <div id="route-summary" class="route-summary" hidden></div>
+          </section>
+          <section id="candidate-detail" class="candidate-detail card" hidden aria-labelledby="candidate-detail-title">
+            <p class="kicker">Evidence</p>
+            <h2 id="candidate-detail-title"></h2>
+            <p id="candidate-location" class="muted"></p>
+            <div id="candidate-claims"></div>
+            <div id="candidate-sources"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/src/app/main.ts"></script>
+  </body>
+</html>

@@ -1,12 +1,11 @@
 # Orientation – Read Models
 
-**Status:** Conceptual bootstrap set.
+**Status:** v0.4.0 standalone discovery extends the released geospatial read-model baseline.
 
 ## SpatialSceneView
 
 Consumer-facing renderer input:
 
-- scene reference/version as needed;
 - features;
 - optional current-position overlay;
 - optional routes;
@@ -24,36 +23,62 @@ Generic map/exploration view:
 - actions;
 - visual hints.
 
-The reusable map-surface foundation requires each feature's opaque `ref` and `sourceRef` to be
-preserved in selection events. Scene replacement is deterministic, and viewport intent remains
-limited to generic automatic or preserve behavior; no transport shape is frozen by this model.
+The reusable map surface preserves each feature's opaque `ref` and `sourceRef` in selection events. Scene replacement is deterministic and viewport intent remains generic automatic/preserve behavior.
 
-It intentionally permits rich content without imposing Vocation/Illumination semantics.
+Rich content is provider-neutral presentation data; foreign domain meaning remains with the supplying context.
 
-Rich content is limited to optional information sections (labelled text rows), resources with stable refs/labels and safe HTTP(S) URIs, and actions with stable refs/labels. Activation events carry only opaque feature/source/resource or feature/source/action refs.
+## DiscoveryCollectionSummaryView
+
+The standalone v0.4 collection list reads a small Orientation-owned summary:
+
+- collection id;
+- researched-at timestamp;
+- question ref/text;
+- area-center label;
+- radius;
+- candidate count.
+
+This list is derived from Orientation persistence and contains no raw external bundle or SQL/JDBC representation.
+
+## DiscoveryCollectionDetailView
+
+Opening a persisted collection exposes the Orientation read state required for exploration:
+
+- question and area snapshot;
+- ordered research criteria and evaluation modes;
+- ordered sources/provenance;
+- candidates;
+- optional strong identity hints;
+- researched location and its source refs;
+- ordered claims with status/basis, optional typed observed value, note and source refs.
+
+The detail view preserves the distinction between externally researched location evidence and provider-backed Orientation Place results.
+
+The standalone map adapts only candidates with an explicit researched coordinate into generic `SpatialFeatureView` input. Candidates without coordinates remain visible in list/detail views and are not silently geocoded by presentation code.
 
 ## RouteView
 
-- route reference;
-- geometry;
+- decoded route geometry;
 - total distance;
 - total duration;
-- optional segment/manoeuvre data;
-- provider/engine facts required for diagnostics/attribution.
+- generic travel profile;
+- provider/engine facts only where required by diagnostics/attribution.
+
+The standalone app uses the selected mapped Discovery Candidate as destination and an explicitly searched Orientation Place as origin. Route state is transient and does not mutate Discovery Collection state.
 
 ## PlaceSearchResultView
 
-Introduced only when place discovery is implemented.
+Provider-neutral place result used by explicit place search, including the standalone route-origin selector.
 
 ## GeocodingCandidateView
 
-Introduced with the geocoding slice; must expose enough provider result information for the consuming domain to make its own acceptance/precision decision.
+Provider-neutral geographic candidate. Consuming domains remain responsible for their own precision/acceptance meaning.
 
 ## PositionOverlayView
 
 - coordinate;
 - accuracy;
 - observed-at;
-- optional heading/speed.
+- optional future heading/speed.
 
-The current implementation accepts a serializable `PositionFix` with coordinate, non-negative accuracy in metres and UTC ISO `observedAt`; heading/speed are not implemented in this slice. Current Location is independent from provider features, and no location history is implied.
+The current implementation accepts a serializable `PositionFix` with coordinate, non-negative accuracy in metres and UTC ISO `observedAt`; heading/speed are not implemented. Current Location is independent from provider features, and no location history is implied.

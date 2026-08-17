@@ -1,25 +1,33 @@
 # Orientation – Architecture
 
-**Status:** Bootstrap baseline
+**Status:** v0.4.0 standalone-product work extends the released v0.1-v0.3 geospatial baseline.
 
 ## Logical architecture
 
 ```text
-                       Orientation bounded context
-        +--------------------------------------------------+
-        |                                                  |
-        |  Java backend                     TS map surface  |
-        |  +----------------------+        +-------------+ |
-        |  | application/domain   |        | scene API   | |
-        |  | provider ports       |        | MapLibre    | |
-        |  +----------+-----------+        +------+------+ |
-        |             |                           |         |
-        +-------------|---------------------------|---------+
-                      |                           |
-              +-------+------+             embedded by
-              | providers /  |             browser/WGT
-              | Valhalla     |
-              +--------------+
+                         Orientation bounded context
+        +----------------------------------------------------------------+
+        |                                                                |
+        |  Java backend                         TypeScript browser/map     |
+        |  +---------------------------+         +----------------------+  |
+        |  | domain/application        |         | Standalone App       |  |
+        |  | place/routing ports       |         | Reference Host       |  |
+        |  | discovery repository port |         | Embed Host           |  |
+        |  +------------+--------------+         | reusable Map Surface |  |
+        |               |                        +----------+-----------+  |
+        |       +-------+--------+                           |              |
+        |       | provider       |                           |              |
+        |       | adapters       |                           |              |
+        |       +-------+--------+                           |              |
+        |               |                                    |              |
+        |       +-------+--------+                           |              |
+        |       | local SQLite   |                           |              |
+        |       | discovery DB   |                           |              |
+        |       +----------------+                           |              |
+        +---------------|------------------------------------|--------------+
+                        |                                    |
+                external providers/                  browser / WGT host
+                Valhalla runtime
 ```
 
 ## Technology baseline
@@ -29,84 +37,119 @@
 - Java 25 LTS
 - Maven
 - Spring Boot 4.1.x
-- stateless bootstrap
+- framework-independent domain/application layers
 - provider interfaces at application boundary
+- local SQLite/JDBC adapter for accepted Orientation-owned Discovery Collection persistence
 
-Spring is host/infrastructure, not domain.
+Spring, JDBC, SQLite, Photon and Valhalla remain host/infrastructure concerns rather than domain types.
 
-### Map surface
+The place/geocoding and routing provider interactions remain stateless. v0.4 introduces durable local state only for the accepted standalone Discovery Collection capability; see ADR-0007.
+
+### Browser/map runtime
 
 - TypeScript
 - MapLibre GL JS 6
-- ESM
-- framework-independent reusable core
-- standalone browser reference host for development/debug
+- ESM/Vite
+- framework-independent reusable map core
 
-The map package produces two browser artifacts: the rich Reference Host
-(`index.html`) and the provider-neutral Embed Host (`embed.html`). The Embed
-Host exposes only the documented Orientation Host Bridge entry point and does
-not include reference/demo controls or provider data. Bridge protocol parsing
-and validation are separate from the browser event transport; WebView2,
-WKWebView and Avalonia/WGT adapters remain outside this repository.
+The map package intentionally produces three browser entries:
 
-Both surfaces use OpenFreeMap Liberty as the default external street basemap.
-The Reference Host presents a small renderer error status when style/tile
-loading fails; the Embed Host continues to report generic `map.status` and
-`bridge.error` events without adding product-specific failure UI.
+1. `app.html` — first-class standalone Orientation discovery/product surface;
+2. `index.html` — Reference/acceptance/development host for isolated generic capabilities;
+3. `embed.html` — provider-neutral Embed Host exposing `orientation.host-bridge` 1.0.
 
-Do not depend on React in the reusable renderer core.
+The standalone app composes Orientation-owned prompt, discovery, place and routing APIs. It may contain product-specific controls and Discovery Collection presentation, but those semantics do not become part of the reusable Map Surface or Host Bridge.
 
-The v0.2.0 Java slice adds a stateless Photon provider adapter behind
-application ports for place search and reverse geocoding. Photon is an
-external, configurable provider at `https://photon.komoot.io` by default; its
-availability is best-effort and its fields do not become Orientation domain
-types. The Reference Host calls only `/api/v1/places/search` and
-`/api/v1/places/reverse`; Vite dev/preview proxying to the local backend keeps
-the browser same-origin and does not expose Photon configuration. Search is
-explicit-submit only, and reverse lookup is an explicit map-center action.
-No database or cache is introduced.
+The Reference Host remains a validation surface for map/place/routing behavior. The Embed Host remains intentionally narrow and contains no standalone-product or provider-domain UI.
+
+OpenFreeMap Liberty remains the default external street basemap. MapLibre is infrastructure; renderer input/output contracts expose Orientation types only.
+
+Do not depend on React/Avalonia/Vocation semantics in the reusable renderer core.
+
+### Place/geocoding
+
+The v0.2 backend exposes provider-neutral place search and reverse geocoding behind Orientation application ports. Photon is the current configurable infrastructure adapter.
+
+Browser hosts call Orientation `/api/v1/places/*` boundaries and never call Photon directly. Current device position is not automatically forwarded to external providers.
 
 ### Routing
 
-Valhalla is the selected upstream routing engine candidate/baseline. Orientation owns the adapter and generic routing semantics exposed to WGT-system consumers.
+Valhalla remains the selected upstream routing engine behind the Orientation `RoutingPort` adapter.
 
-Valhalla source is not copied into this repository.
+The released v0.3 boundary provides two-point DRIVING/CYCLING/WALKING route planning, decoded Orientation route geometry, distance/duration, Map Surface route overlays and explicit route replacement/clear behavior.
 
-The v0.3.0 #9 slice establishes the Java domain/application boundary before
-provider integration: `RouteRequest`, `TravelProfile`, `RouteGeometry`,
-`Route`, `RoutingPort` and `RoutingService`, exposed through
-`POST /api/v1/routes`. The route geometry is decoded and bounded in Orientation
-terms. No Valhalla URL, runtime, container, DTO, polyline decoder, dataset or
-external request is part of #9. Those belong to #10.
+v0.4 standalone product composition consumes this boundary unchanged. Public transit, shared mobility and multimodal planning require later explicit domain models rather than new string values in the v0.3 Travel Profile.
 
-v0.3.0 is route planning/routing, not full live navigation. Route rendering is
-owned by the separate #11 map-surface slice, and the Reference Host workflow
-by #12.
+### Discovery acquisition and persistence
+
+The v0.4 acquisition path is:
+
+```text
+explicit SpatialResearchQuestion
+       |
+       v
+SpatialResearchPromptService
+       |
+       v
+external manual research / ChatGPT
+       |
+       v
+Spatial Research Bundle 1.0
+       |
+       v
+semantic + strict-shape validation
+       |
+       v
+application ACL / translation
+       |
+       v
+DiscoveryCollection
+       |
+       v
+DiscoveryRepository -> local SQLite
+```
+
+The external bundle is not the persistence model. Research evidence, provider-backed Places and Orientation-derived values retain distinct authority/provenance.
+
+SQLite is a local implementation detail. Cross-device delivery is not implied by local persistence and must use the system Conveyance decision model if a real requirement appears.
 
 ## Process/deployment model
 
-A bounded context is not a single process prescription.
+A bounded context is not a single-process prescription.
 
-Possible deployment:
+Current desktop/browser development and standalone-product topology can be:
 
 ```text
-WGT / browser host
-      |
-      +-- embedded Orientation map surface
-      |
-      +-- Orientation Java backend (local or remote as scenario requires)
-                         |
-                         +-- geocode/place providers
-                         +-- Valhalla runtime
+Browser
+  |
+  +-- Standalone Orientation App / Reference Host
+  |        |
+  |        +-- reusable Orientation Map Surface
+  |
+  +-- Orientation Java backend
+             |
+             +-- local SQLite discovery database
+             +-- place/geocoding provider
+             +-- Valhalla runtime
 ```
 
-Exact local/remote topology is decided per capability and platform.
+WGT may instead embed the reusable Orientation surface and invoke accepted Orientation boundaries through its own product composition. That does not make the standalone app the WGT UI or make WGT authoritative for Orientation state.
+
+Exact local/remote topology remains capability/platform-specific.
+
+## Browser/runtime acceptance
+
+The real Valhalla smoke keeps the generic Reference Host route path and adds the standalone product path.
+
+For standalone acceptance it uses a clean local SQLite database, imports through a real Chrome session, terminates/restarts the backend with the same database, reopens the same collection in a new browser session and requests a real Valhalla route to the imported candidate.
+
+This proves product composition without changing `orientation.host-bridge` 1.0.
 
 ## WGT integration gate
 
-Before deleting the existing WGT Mapsui implementation, the Orientation map surface must prove:
+Orientation generic map/runtime acceptance for WGT remains distinct from standalone product acceptance:
 
-1. browser/reference host;
+1. browser/reference/standalone generic runtime evidence;
 2. WGT Windows embedded host;
 3. physical iPhone embedded host.
 
@@ -116,12 +159,14 @@ The physical iPhone proof is a technology/runtime compatibility gate, not a reas
 
 - Vocation React Leaflet renderer
 - Vocation Nominatim geocoder implementation
-- WGT Mapsui renderer
+- historical WGT Mapsui renderer where not already retired
 
-These remain only until accepted Orientation replacements and contract migrations exist.
+Consumer migration remains work in the owning consumer repository after the relevant Orientation replacement gates pass.
 
 ## Data ownership
 
 No cross-context database access.
 
-Technical caches/indexes introduced in Orientation may store only data justified by Orientation's capability/provider rules and must not become authoritative copies of foreign business domains.
+Orientation SQLite stores Orientation-owned personal discovery state and required research provenance only. It must not become an authoritative copy of Vocation, Illumination or WGT business state.
+
+Technical provider caches/indexes, if introduced later, remain separate in authority from durable Discovery Collections and require their own lifecycle justification.

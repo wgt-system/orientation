@@ -21,6 +21,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         reference: "index.html",
+        app: "app.html",
         embed: "embed.html",
       },
     },
