@@ -1,0 +1,185 @@
+name: MOTIS Journey Smoke
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/motis-smoke.yml"
+      - ".github/scripts/motis-journey-smoke.py"
+      - "backend/src/main/java/system/wgt/orientation/application/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/host/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
+      - "backend/src/main/resources/application.yaml"
+  push:
+    branches: [dev, main]
+    paths:
+      - ".github/workflows/motis-smoke.yml"
+      - ".github/scripts/motis-journey-smoke.py"
+      - "backend/src/main/java/system/wgt/orientation/application/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/host/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
+      - "backend/src/main/resources/application.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  journey-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MOTIS_VERSION: v2.11.0
+      MOTIS_ARCHIVE_SHA256: 508505d3f9cd2e872c763743c459cae4e0539fad14bf490e23251e013d3a6dfa
+      TEST_DATA_COMMIT: e2a596045675e12760d77db991b57f1979a998e6
+      OSM_BLOB_SHA: d4f8a764450637f25a687ba2444914a13b087cab
+      GTFS_BLOB_SHA: 8dd7acedd31f961217bf69e4e8bf7d5dae4c8c97
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Download and verify pinned MOTIS runtime and test data
+        run: |
+          set -euo pipefail
+          ROOT=/tmp/orientation-motis-smoke
+          mkdir -p "$ROOT/data" "$ROOT/runtime"
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://github.com/motis-project/motis/releases/download/${MOTIS_VERSION}/motis-linux-amd64.tar.bz2" \
+            --output "$ROOT/motis-linux-amd64.tar.bz2"
+          echo "${MOTIS_ARCHIVE_SHA256}  $ROOT/motis-linux-amd64.tar.bz2" | sha256sum --check --strict
+          tar -xjf "$ROOT/motis-linux-amd64.tar.bz2" -C "$ROOT/runtime"
+          MOTIS_BIN="$(find "$ROOT/runtime" -maxdepth 3 -type f -name motis -print -quit)"
+          test -n "$MOTIS_BIN"
+          if [ "$MOTIS_BIN" != "$ROOT/runtime/motis" ]; then
+            ln -s "$MOTIS_BIN" "$ROOT/runtime/motis"
+          fi
+          chmod +x "$ROOT/runtime/motis"
+
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://raw.githubusercontent.com/motis-project/test-data/${TEST_DATA_COMMIT}/aachen.osm.pbf" \
+            --output "$ROOT/data/aachen.osm.pbf"
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://raw.githubusercontent.com/motis-project/test-data/${TEST_DATA_COMMIT}/AVV_GTFS_Masten_mit_SPNV.zip" \
+            --output "$ROOT/data/avv.gtfs.zip"
+
+          test "$(git hash-object "$ROOT/data/aachen.osm.pbf")" = "${OSM_BLOB_SHA}"
+          test "$(git hash-object "$ROOT/data/avv.gtfs.zip")" = "${GTFS_BLOB_SHA}"
+          test -x "$ROOT/runtime/motis"
+
+      - name: Prepare deterministic Journey request from pinned GTFS
+        run: |
+          python3 .github/scripts/motis-journey-smoke.py prepare \
+            /tmp/orientation-motis-smoke/data/avv.gtfs.zip \
+            /tmp/orientation-motis-smoke/request.json \
+            /tmp/orientation-motis-smoke/request-metadata.json
+
+      - name: Import pinned OSM and GTFS into MOTIS
+        working-directory: /tmp/orientation-motis-smoke/runtime
+        run: |
+          set -euo pipefail
+          ./motis config ../data/aachen.osm.pbf ../data/avv.gtfs.zip > /tmp/motis-config.log 2>&1
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          metadata = json.loads(Path("/tmp/orientation-motis-smoke/request-metadata.json").read_text(encoding="utf-8"))
+          service_date = metadata["serviceDate"]
+          config = Path("config.yml")
+          text = config.read_text(encoding="utf-8")
+          marker = "timetable:\n"
+          if marker not in text:
+              raise SystemExit("Generated MOTIS config has no timetable section")
+          text = text.replace(
+              marker,
+              f"timetable:\n  first_day: {service_date}\n  num_days: 7\n",
+              1,
+          )
+          config.write_text(text, encoding="utf-8")
+          print(f"Pinned MOTIS timetable window to {service_date} + 7 days")
+          print(text)
+          PY
+          ./motis import > /tmp/motis-import.log 2>&1
+
+      - name: Start pinned MOTIS runtime
+        working-directory: /tmp/orientation-motis-smoke/runtime
+        run: |
+          ./motis server > /tmp/motis-server.log 2>&1 &
+          echo $! > /tmp/motis.pid
+          for attempt in $(seq 1 90); do
+            if (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1; then
+              echo "MOTIS is accepting connections on 8080."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MOTIS did not become reachable within three minutes."
+          cat /tmp/motis-server.log
+          exit 1
+
+      - name: Start Orientation backend against local MOTIS
+        run: |
+          cd backend
+          SERVER_PORT=8082 \
+          ORIENTATION_MOTIS_BASE_URL=http://127.0.0.1:8080 \
+            ./mvnw --batch-mode spring-boot:run > /tmp/orientation-motis.log 2>&1 &
+          echo $! > /tmp/orientation-motis.pid
+
+      - name: Wait for Orientation health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:8082/actuator/health > /tmp/orientation-motis-health.json; then
+              cat /tmp/orientation-motis-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Orientation did not become healthy within two minutes."
+          cat /tmp/orientation-motis.log
+          exit 1
+
+      - name: Plan a real public-transit Journey through Orientation
+        run: |
+          set -euo pipefail
+          cat /tmp/orientation-motis-smoke/request-metadata.json
+          status="$(curl --silent --show-error \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/orientation-motis-smoke/request.json \
+            --output /tmp/orientation-motis-smoke/response.json \
+            --write-out '%{http_code}' \
+            http://127.0.0.1:8082/api/v1/journeys)"
+          if [ "$status" != "200" ]; then
+            echo "Orientation Journey request returned HTTP $status"
+            cat /tmp/orientation-motis-smoke/response.json
+            exit 1
+          fi
+          python3 -m json.tool /tmp/orientation-motis-smoke/response.json \
+            > /tmp/orientation-motis-smoke/response.pretty.json
+          head -n 160 /tmp/orientation-motis-smoke/response.pretty.json
+          python3 .github/scripts/motis-journey-smoke.py verify /tmp/orientation-motis-smoke/response.json
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          echo '=== Request metadata ==='
+          cat /tmp/orientation-motis-smoke/request-metadata.json 2>/dev/null || true
+          echo '=== MOTIS config ==='
+          tail -n 160 /tmp/motis-config.log 2>/dev/null || true
+          echo '=== MOTIS import ==='
+          tail -n 240 /tmp/motis-import.log 2>/dev/null || true
+          echo '=== MOTIS server ==='
+          tail -n 240 /tmp/motis-server.log 2>/dev/null || true
+          echo '=== Orientation ==='
+          tail -n 240 /tmp/orientation-motis.log 2>/dev/null || true
+          echo '=== Journey response ==='
+          cat /tmp/orientation-motis-smoke/response.json 2>/dev/null || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f /tmp/orientation-motis.pid ]; then kill "$(cat /tmp/orientation-motis.pid)" 2>/dev/null || true; fi
+          if [ -f /tmp/motis.pid ]; then kill "$(cat /tmp/motis.pid)" 2>/dev/null || true; fi
