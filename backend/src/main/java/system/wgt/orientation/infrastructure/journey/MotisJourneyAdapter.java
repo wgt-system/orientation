@@ -32,6 +32,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class MotisJourneyAdapter implements JourneyPort {
     static final int MAX_PROVIDER_RESPONSE_BYTES = 4_194_304;
@@ -56,23 +57,36 @@ public class MotisJourneyAdapter implements JourneyPort {
         if (request == null) {
             throw new IllegalArgumentException("Journey request is required.");
         }
+        Map<String, Object> variables = Map.ofEntries(
+                Map.entry("fromPlace", place(request.origin())),
+                Map.entry("toPlace", place(request.destination())),
+                Map.entry("time", request.time().toString()),
+                Map.entry("arriveBy", request.timeMode() == JourneyTimeMode.ARRIVE_BY),
+                Map.entry("transitModes", TRANSIT_MODES),
+                Map.entry("directModes", ""),
+                Map.entry("preTransitModes", "WALK"),
+                Map.entry("postTransitModes", "WALK"),
+                Map.entry("detailedLegs", true),
+                Map.entry("detailedTransfers", true),
+                Map.entry("maxItineraries", JourneyPlan.MAX_JOURNEYS),
+                Map.entry("realtimeMode", "REALTIME"));
         try {
             JsonNode response = client.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v6/plan")
-                            .queryParam("fromPlace", place(request.origin()))
-                            .queryParam("toPlace", place(request.destination()))
-                            .queryParam("time", request.time().toString())
-                            .queryParam("arriveBy", request.timeMode() == JourneyTimeMode.ARRIVE_BY)
-                            .queryParam("transitModes", TRANSIT_MODES)
-                            .queryParam("directModes", "")
-                            .queryParam("preTransitModes", "WALK")
-                            .queryParam("postTransitModes", "WALK")
-                            .queryParam("detailedLegs", true)
-                            .queryParam("detailedTransfers", true)
-                            .queryParam("maxItineraries", JourneyPlan.MAX_JOURNEYS)
-                            .queryParam("realtimeMode", "REALTIME")
-                            .build())
+                            .queryParam("fromPlace", "{fromPlace}")
+                            .queryParam("toPlace", "{toPlace}")
+                            .queryParam("time", "{time}")
+                            .queryParam("arriveBy", "{arriveBy}")
+                            .queryParam("transitModes", "{transitModes}")
+                            .queryParam("directModes", "{directModes}")
+                            .queryParam("preTransitModes", "{preTransitModes}")
+                            .queryParam("postTransitModes", "{postTransitModes}")
+                            .queryParam("detailedLegs", "{detailedLegs}")
+                            .queryParam("detailedTransfers", "{detailedTransfers}")
+                            .queryParam("maxItineraries", "{maxItineraries}")
+                            .queryParam("realtimeMode", "{realtimeMode}")
+                            .build(variables))
                     .exchange((httpRequest, httpResponse) -> handleResponse(httpResponse));
             return parsePlan(response);
         } catch (JourneyProviderException exception) {
