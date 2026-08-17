@@ -112,12 +112,13 @@ See [`docs/INDEX.md`](docs/INDEX.md).
 
 Focus: Routing.
 
-The next Orientation milestone defines the provider-neutral routing boundary:
+The current Orientation milestone completes provider-neutral route planning:
 two-point `RouteRequest` semantics, generic travel profiles, decoded bounded
 route geometry, distance/duration, a `RoutingPort`, `RoutingService` and the
-narrow `POST /api/v1/routes` host endpoint. Issue #9 deliberately contains no
-Valhalla implementation, external routing request, map route rendering or
-Reference Host route workflow. Those are separate work packages (#10–#12).
+narrow `POST /api/v1/routes` host endpoint. Issue #10 established that boundary
+and is complete. Issue #11 adds the first Valhalla provider behind it, Issue #12
+renders generic routes on the Map Surface, and Issue #13 completes the explicit
+Reference Host route-planning workflow.
 
 v0.3.0 is route planning/routing, not full live navigation. It does not add
 turn-by-turn navigation, live GPS rerouting, persistence or WGT integration.

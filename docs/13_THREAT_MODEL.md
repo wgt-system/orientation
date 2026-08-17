@@ -52,10 +52,11 @@ Controls:
 Controls:
 
 - timeouts;
-- bounded retries;
+- bounded retries where deliberately introduced;
 - rate limiting/backoff where provider requires it;
 - no secrets in logs/contracts;
-- explicit provider configuration.
+- explicit trusted provider configuration;
+- bounded provider response bodies before parsing.
 
 For v0.2.0, explicitly submitted search text and explicit reverse-geocoding
 coordinates are sent to the trusted configured Photon endpoint. PositionFix,
@@ -70,14 +71,20 @@ explicit-submit only, and reverse geocoding sends only the explicitly chosen
 map-center Coordinate. A PositionFix is never used as a search bias or reverse
 request.
 
-For v0.3.0 Issue #9, no routing request leaves the local process. The HTTP
-boundary accepts only explicitly supplied origin/destination Coordinates and a
-closed generic Travel Profile. PositionFix, identity, analytics identifiers,
-search history and persistence are not involved. A future #10 Valhalla adapter
-will be the explicit provider boundary; its endpoint, timeout and data-sharing
-policy must be reviewed there. Route Geometry is bounded to 10,000 Coordinates
-to limit memory and response amplification, and provider failures are reduced
-to stable Orientation outcomes without provider internals in error bodies.
+For v0.3.0, Issue #10 established the local provider-neutral routing boundary.
+Issue #11 is the explicit Valhalla provider boundary: only the origin,
+destination and generic Travel Profile from an explicit Route Request are
+translated into a request to the trusted configured Valhalla endpoint. The
+default development endpoint is local (`http://localhost:8002`); deployment may
+configure another trusted endpoint. PositionFix, identity, analytics identifiers,
+search history and foreign-domain state are not forwarded implicitly.
+
+The Valhalla adapter uses finite connect/read timeouts, does not introduce
+automatic retries, bounds provider responses to 2 MiB before parsing, reduces
+provider errors to stable Orientation failure kinds, decodes polyline6 before
+crossing `RoutingPort`, and enforces the existing 10,000-Coordinate Route
+Geometry bound. Raw provider response bodies, error details and route request
+coordinates are not exposed in stable error messages.
 
 ### SSRF
 
@@ -85,7 +92,12 @@ If backend adapters accept configured URLs:
 
 - do not allow arbitrary user/provider scene data to become backend fetch targets;
 - constrain provider endpoints through trusted configuration;
-- validate redirects/network targets where relevant.
+- do not follow redirects unless a provider-specific review requires them;
+- validate deployment network targets where relevant.
+
+Photon and Valhalla provider URLs are application configuration, not request
+parameters. The JDK HTTP clients used by the current adapters do not opt into
+redirect following.
 
 ### WebView/browser bridge
 

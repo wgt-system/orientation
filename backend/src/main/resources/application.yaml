@@ -17,3 +17,8 @@ orientation:
     connect-timeout: 3s
     read-timeout: 5s
     user-agent: wgt-system-orientation/0.2.0
+  valhalla:
+    base-url: http://localhost:8002
+    connect-timeout: 2s
+    read-timeout: 10s
+    user-agent: wgt-system-orientation/0.3.0

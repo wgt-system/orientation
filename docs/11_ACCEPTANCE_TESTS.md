@@ -122,23 +122,49 @@ migration is included. OpenFreeMap Liberty, MapLibre 6 worker/vector readiness,
 current-location visualization, `orientation.host-bridge` 1.0 and all schemas
 remain unchanged.
 
-## v0.3.0 — Issue #9
+## v0.3.0 — Routing
 
-Focus: Routing. v0.3.0 is route planning/routing, not full live navigation.
+Focus: route planning/routing, not full live navigation.
 
-Issue #9 acceptance requires deterministic validation of the three generic
+### Issue #10 — generic routing boundary
+
+Issue #10 acceptance requires deterministic validation of the three generic
 Travel Profiles, two-point Route Requests, immutable bounded Route Geometry
 (2–10,000 Coordinates), and finite non-negative Route distance/duration.
 `RoutingService` must return a fake-port Route and preserve the distinct
-no-route, unavailable, timeout and invalid-provider-response outcomes.
+no-route, unavailable, timeout, rate-limit and invalid-provider-response outcomes.
 
 `POST /api/v1/routes` must accept only Orientation DTOs, validate coordinates
 and profile, return an Orientation Route envelope with decoded geometry, and
 map failures to `400` invalid input, `404` no route, `502` invalid provider
 response, `503` unavailable/timeout and `429` rate limiting. No provider JSON,
 Valhalla term, encoded polyline, PositionFix, persistence or network request is
-allowed in this slice. Existing Place Search and Reverse Geocoding behavior,
-`orientation.host-bridge` 1.0 and all schemas remain unchanged.
+allowed in this boundary slice. Existing Place Search and Reverse Geocoding
+behavior, `orientation.host-bridge` 1.0 and all schemas remain unchanged.
+
+### Issue #11 — Valhalla provider
+
+Issue #11 acceptance requires a pinned reviewed Valhalla runtime and bounded
+development dataset, deterministic adapter tests, profile mapping for DRIVING,
+CYCLING and WALKING, provider response/time limits, provider-neutral failure
+mapping, and full polyline6 decoding before a Route crosses `RoutingPort`.
+A real local provider smoke must prove the three supported profiles through the
+Orientation route endpoint. Valhalla JSON, costing names, error codes and
+encoded geometry must not leak into domain/application or consumer boundaries.
+
+### Issue #12 — route rendering
+
+Issue #12 acceptance requires provider-neutral decoded Route geometry to render
+on the Map Surface with deterministic replacement/clear/lifecycle behavior,
+origin/destination presentation and coherent viewport fitting while preserving
+Spatial Scene features and Current Position.
+
+### Issue #13 — Reference Host route planning
+
+Issue #13 acceptance requires explicit endpoints/profile selection, relative
+Orientation API calls, route geometry plus distance/duration presentation,
+loading/error/no-route handling, stale-request protection and browser evidence
+for the complete v0.3.0 route-planning workflow.
 
 ## Future integration gates
 
