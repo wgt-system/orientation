@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2, v0.2.0 and v0.3.0 released. v0.3.0 was accepted on 2026-08-17.
+**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2, v0.2.0 and v0.3.0 released. v0.4.0 implementation is complete and is being promoted after the final #24 release gate.
 
 Milestone names, when created, use semantic versions only.
 
@@ -192,11 +192,36 @@ PositionFix forwarding, persistence, OS/device permission ownership,
 foreign-domain semantics or a new Host Bridge version. `orientation.host-bridge`
 remains 1.0.
 
-Future work is intentionally unversioned until the released milestone is
-reviewed. Consumer integration gates, standalone packaging, nearby/POI
-discovery and any future navigation depth must be justified as concrete slices
-rather than pre-created milestone ladders.
+## v0.4.0
+
+Focus: standalone spatial research/discovery and local persistence.
+
+The implemented work packages are:
+
+1. **#20 — Define Orientation spatial-research/import semantics**: versioned `orientation.spatial-research` 1.0 contract, criteria, provenance, evidence and strict heuristic/sensitive-trait boundaries.
+2. **#21 — Generate external-research prompts**: deterministic prompt generation from explicit user criteria with embedded contract/version guidance and no paid LLM/API execution.
+3. **#22 — Import and persist discovery data**: validate-before-mutation, explicit import translation, local SQLite persistence, deterministic re-import semantics and restart/reopen support.
+4. **#23 — Build the standalone discovery application**: question -> prompt -> import -> persisted collection -> map/evidence -> selected destination -> DRIVING/CYCLING/WALKING route, while Reference and Embed hosts remain separate.
+5. **#24 — Harden and release**: integrated regression, dependency-vulnerability gate, persistent restart/reopen browser smoke, WGT/Host Bridge compatibility audit and release-state consistency.
+
+Dependency order:
+
+```text
+#20
+  └── #21
+#20
+  └── #22
+#21 + #22
+  └── #23
+#20 + #21 + #22 + #23
+  └── #24
+```
+
+v0.4.0 does not include public transit, realtime transit, shared mobility,
+multimodal journey planning, turn-by-turn live GPS rerouting, automatic
+background research, paid LLM/API execution, a generic prompt/research service,
+Vocation migration completion or cross-device synchronization.
 
 ## Sequencing rule
 
-Do not create speculative contracts for later milestones in earlier milestones. Stabilize the smallest consumed boundary first.
+Do not create speculative contracts for later milestones in earlier milestones. Stabilize the smallest consumed boundary first and create future slices only when a concrete requirement exists.
