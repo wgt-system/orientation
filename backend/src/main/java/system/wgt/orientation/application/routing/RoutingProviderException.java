@@ -8,6 +8,11 @@ public class RoutingProviderException extends RuntimeException {
         this.kind = kind;
     }
 
+    public RoutingProviderException(RoutingFailureKind kind, String message, Throwable cause) {
+        super(message, cause);
+        this.kind = kind;
+    }
+
     public RoutingFailureKind kind() {
         return kind;
     }

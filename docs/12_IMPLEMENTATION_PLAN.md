@@ -148,32 +148,33 @@ Focus: Routing.
 This is the current concrete Orientation milestone. It is route
 planning/routing, not full live navigation. The four work packages are:
 
-1. **#9 — Define generic routing model and HTTP boundary**: two-point
+1. **#10 — Define generic routing model and HTTP boundary**: two-point
    `RouteRequest`, generic `TravelProfile`, `Route`, bounded decoded
    `RouteGeometry`, `RoutingPort`, `RoutingService`, stable failures and
    `POST /api/v1/routes`, proven with deterministic fake-port tests. This
-   package is implemented in the current slice.
-2. **#10 — Integrate Valhalla routing provider**: first adapter, reviewed
-   runtime/dataset, provider mapping, timeout/error handling and local smoke.
-3. **#11 — Render generic routes on the Orientation map surface**: route
+   package is implemented and accepted on `dev`.
+2. **#11 — Integrate Valhalla routing provider**: first adapter, reviewed
+   pinned runtime/dataset, provider mapping, timeout/error handling,
+   deterministic provider tests and local real-provider smoke.
+3. **#12 — Render generic routes on the Orientation map surface**: route
    overlay lifecycle, start/end, viewport fit and deterministic fixture tests.
-4. **#12 — Integrate route planning into the Orientation Reference Host**:
+4. **#13 — Integrate route planning into the Orientation Reference Host**:
    explicit endpoints/profile, API call, route rendering and loading/error
    states while preserving place/reverse behavior.
 
 Dependency graph:
 
 ```text
-#9
-├── #10
-└── #11
+#10
+├── #11
+└── #12
      \
-      #10 + #11 -> #12
+      #11 + #12 -> #13
 ```
 
 Not included in v0.3.0: turn-by-turn navigation, live GPS rerouting,
 PositionFix forwarding, foreign-domain migration, WGT product integration,
-route UI in #9, route rendering, Valhalla runtime/adapter work in #9 or
+route UI in #10, route rendering or provider runtime work in #10, or
 persistence.
 
 Future work is intentionally unversioned until this milestone is reviewed:
