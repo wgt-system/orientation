@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2 and v0.2.0 released. v0.2.0 was released on 2026-08-16. v0.3.0 is the current routing milestone.
+**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2, v0.2.0 and v0.3.0 released. v0.3.0 was accepted on 2026-08-17.
 
 Milestone names, when created, use semantic versions only.
 
@@ -143,24 +143,30 @@ Vocation remains authoritative for Work Location/Precision and all job-market se
 
 ## v0.3.0
 
-Focus: Routing.
+Focus: Routing. Released and accepted on 2026-08-17.
 
-This is the current concrete Orientation milestone. It is route
-planning/routing, not full live navigation. The four work packages are:
+v0.3.0 completes provider-neutral route planning/routing, not full live
+navigation. The four completed work packages are:
 
 1. **#10 — Define generic routing model and HTTP boundary**: two-point
    `RouteRequest`, generic `TravelProfile`, `Route`, bounded decoded
    `RouteGeometry`, `RoutingPort`, `RoutingService`, stable failures and
-   `POST /api/v1/routes`, proven with deterministic fake-port tests. This
-   package is implemented and accepted on `dev`.
-2. **#11 — Integrate Valhalla routing provider**: first adapter, reviewed
-   pinned runtime/dataset, provider mapping, timeout/error handling,
-   deterministic provider tests and local real-provider smoke.
-3. **#12 — Render generic routes on the Orientation map surface**: route
-   overlay lifecycle, start/end, viewport fit and deterministic fixture tests.
+   `POST /api/v1/routes`, proven with deterministic fake-port tests.
+2. **#11 — Integrate Valhalla routing provider**: Valhalla 3.8.3 behind the
+   infrastructure boundary, pinned reviewed runtime and retained Hamburg OSM
+   dataset, bounded provider responses/timeouts, provider-neutral failure
+   mapping, deterministic adapter tests and real-provider smoke for DRIVING,
+   CYCLING and WALKING.
+3. **#12 — Render generic routes on the Orientation map surface**: provider-
+   neutral route overlay lifecycle, route line/casing, origin/destination,
+   deterministic replace/clear behavior, lifecycle cleanup and ordinary plus
+   antimeridian-safe viewport fitting while preserving Spatial Scene and Current
+   Position overlays.
 4. **#13 — Integrate route planning into the Orientation Reference Host**:
-   explicit endpoints/profile, API call, route rendering and loading/error
-   states while preserving place/reverse behavior.
+   explicit Start/Destination search and selection, explicit profile choice,
+   strict relative Orientation API calls, route summary/rendering, distinct
+   controlled failures, stale-request cancellation, route replacement/clear and
+   responsive desktop/mobile host usability.
 
 Dependency graph:
 
@@ -172,14 +178,24 @@ Dependency graph:
       #11 + #12 -> #13
 ```
 
-Not included in v0.3.0: turn-by-turn navigation, live GPS rerouting,
-PositionFix forwarding, foreign-domain migration, WGT product integration,
-route UI in #10, route rendering or provider runtime work in #10, or
-persistence.
+Acceptance is complete on integrated `dev` commit
+`7e6902bb8c1015aef506bd5a94ede702c705c198`: normal backend/map CI passes and
+the real Valhalla 3.8.3 + deterministic Photon + Orientation backend +
+production Reference Host + Chrome smoke passes. The real-provider smoke proves
+all three profiles and decoded endpoint geometry; the browser smoke proves
+explicit endpoint selection, visible route rendering, profile invalidation,
+route replacement/clear, preservation of Place/Reverse/Current Position
+behavior and desktop/mobile scrolling.
 
-Future work is intentionally unversioned until this milestone is reviewed:
-consumer integration gates, standalone packaging and other provider/domain
-migrations.
+Not included in v0.3.0: turn-by-turn guidance, live GPS rerouting, automatic
+PositionFix forwarding, persistence, OS/device permission ownership,
+foreign-domain semantics or a new Host Bridge version. `orientation.host-bridge`
+remains 1.0.
+
+Future work is intentionally unversioned until the released milestone is
+reviewed. Consumer integration gates, standalone packaging, nearby/POI
+discovery and any future navigation depth must be justified as concrete slices
+rather than pre-created milestone ladders.
 
 ## Sequencing rule
 
