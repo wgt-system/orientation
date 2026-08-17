@@ -23,5 +23,6 @@
 21. [Public-Transit Journey Boundary](21_JOURNEY_BOUNDARY.md)
 22. [MOTIS Journey Provider](22_MOTIS_JOURNEY_PROVIDER.md)
 23. [Journey Map Surface](23_JOURNEY_MAP_SURFACE.md)
+24. [Standalone Public-Transit Journey Flow](24_STANDALONE_JOURNEY_APP.md)
 
 ADRs live under [`docs/adr/`](adr/).
