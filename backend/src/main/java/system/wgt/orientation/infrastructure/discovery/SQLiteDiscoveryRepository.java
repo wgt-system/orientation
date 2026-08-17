@@ -35,7 +35,6 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
                     connection.commit();
                     return new StoreResult(false, existing);
                 }
-
                 insertCriteria(connection, collection);
                 insertSources(connection, collection);
                 insertCandidates(connection, collection);
@@ -129,10 +128,7 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
     }
 
     private void insertCriteria(Connection connection, DiscoveryCollection collection) throws SQLException {
-        String sql = """
-                INSERT INTO discovery_criteria(collection_id, ordinal, criterion_ref, description, evaluation_mode)
-                VALUES (?, ?, ?, ?, ?)
-                """;
+        String sql = "INSERT INTO discovery_criteria(collection_id, ordinal, criterion_ref, description, evaluation_mode) VALUES (?, ?, ?, ?, ?)";
         try (var statement = connection.prepareStatement(sql)) {
             int ordinal = 0;
             for (var criterion : collection.criteria()) {
@@ -148,10 +144,7 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
     }
 
     private void insertSources(Connection connection, DiscoveryCollection collection) throws SQLException {
-        String sql = """
-                INSERT INTO research_sources(collection_id, ordinal, source_ref, url, title, retrieved_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """;
+        String sql = "INSERT INTO research_sources(collection_id, ordinal, source_ref, url, title, retrieved_at) VALUES (?, ?, ?, ?, ?, ?)";
         try (var statement = connection.prepareStatement(sql)) {
             int ordinal = 0;
             for (var source : collection.sources()) {
@@ -168,24 +161,23 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
     }
 
     private void insertCandidates(Connection connection, DiscoveryCollection collection) throws SQLException {
-        String candidateSql = """
+        String sql = """
                 INSERT INTO discovery_candidates(
                     collection_id, ordinal, candidate_ref, display_name, canonical_uri,
                     researched_location_label, researched_longitude, researched_latitude)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        try (var candidateStatement = connection.prepareStatement(candidateSql)) {
+        try (var statement = connection.prepareStatement(sql)) {
             int ordinal = 0;
             for (var candidate : collection.candidates()) {
-                candidateStatement.setString(1, collection.collectionId());
-                candidateStatement.setInt(2, ordinal++);
-                candidateStatement.setString(3, candidate.candidateRef());
-                candidateStatement.setString(4, candidate.displayName());
-                setNullableString(candidateStatement, 5, candidate.identity().flatMap(DiscoveryCollection.Identity::canonicalUri));
-                candidateStatement.setString(6, candidate.researchedLocation().label());
-                setCoordinate(candidateStatement, 7, 8, candidate.researchedLocation().coordinate());
-                candidateStatement.executeUpdate();
-
+                statement.setString(1, collection.collectionId());
+                statement.setInt(2, ordinal++);
+                statement.setString(3, candidate.candidateRef());
+                statement.setString(4, candidate.displayName());
+                setNullableString(statement, 5, candidate.identity().flatMap(DiscoveryCollection.Identity::canonicalUri));
+                statement.setString(6, candidate.researchedLocation().label());
+                setCoordinate(statement, 7, 8, candidate.researchedLocation().coordinate());
+                statement.executeUpdate();
                 insertExternalIds(connection, collection.collectionId(), candidate);
                 insertLocationSources(connection, collection.collectionId(), candidate);
                 insertClaims(connection, collection.collectionId(), candidate);
@@ -193,15 +185,11 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
         }
     }
 
-    private void insertExternalIds(Connection connection, String collectionId,
-                                   DiscoveryCollection.Candidate candidate) throws SQLException {
+    private void insertExternalIds(Connection connection, String collectionId, DiscoveryCollection.Candidate candidate) throws SQLException {
         if (candidate.identity().isEmpty()) {
             return;
         }
-        String sql = """
-                INSERT INTO candidate_external_ids(collection_id, candidate_ref, ordinal, provider, external_id)
-                VALUES (?, ?, ?, ?, ?)
-                """;
+        String sql = "INSERT INTO candidate_external_ids(collection_id, candidate_ref, ordinal, provider, external_id) VALUES (?, ?, ?, ?, ?)";
         try (var statement = connection.prepareStatement(sql)) {
             int ordinal = 0;
             for (var externalId : candidate.identity().orElseThrow().externalIds()) {
@@ -216,12 +204,8 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
         }
     }
 
-    private void insertLocationSources(Connection connection, String collectionId,
-                                       DiscoveryCollection.Candidate candidate) throws SQLException {
-        String sql = """
-                INSERT INTO candidate_location_sources(collection_id, candidate_ref, ordinal, source_ref)
-                VALUES (?, ?, ?, ?)
-                """;
+    private void insertLocationSources(Connection connection, String collectionId, DiscoveryCollection.Candidate candidate) throws SQLException {
+        String sql = "INSERT INTO candidate_location_sources(collection_id, candidate_ref, ordinal, source_ref) VALUES (?, ?, ?, ?)";
         try (var statement = connection.prepareStatement(sql)) {
             int ordinal = 0;
             for (String sourceRef : candidate.researchedLocation().sourceRefs()) {
@@ -235,8 +219,7 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
         }
     }
 
-    private void insertClaims(Connection connection, String collectionId,
-                              DiscoveryCollection.Candidate candidate) throws SQLException {
+    private void insertClaims(Connection connection, String collectionId, DiscoveryCollection.Candidate candidate) throws SQLException {
         String sql = """
                 INSERT INTO candidate_claims(
                     collection_id, candidate_ref, ordinal, criterion_ref, status, basis,
@@ -266,12 +249,8 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
         }
     }
 
-    private void insertClaimSources(Connection connection, String collectionId, String candidateRef,
-                                    DiscoveryCollection.Claim claim) throws SQLException {
-        String sql = """
-                INSERT INTO claim_sources(collection_id, candidate_ref, criterion_ref, ordinal, source_ref)
-                VALUES (?, ?, ?, ?, ?)
-                """;
+    private void insertClaimSources(Connection connection, String collectionId, String candidateRef, DiscoveryCollection.Claim claim) throws SQLException {
+        String sql = "INSERT INTO claim_sources(collection_id, candidate_ref, criterion_ref, ordinal, source_ref) VALUES (?, ?, ?, ?, ?)";
         try (var statement = connection.prepareStatement(sql)) {
             int ordinal = 0;
             for (String sourceRef : claim.sourceRefs()) {
@@ -287,8 +266,7 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
     }
 
     private Optional<DiscoveryCollection> findByFingerprint(Connection connection, String fingerprint) throws SQLException {
-        try (var statement = connection.prepareStatement(
-                "SELECT collection_id FROM discovery_collections WHERE import_fingerprint = ?")) {
+        try (var statement = connection.prepareStatement("SELECT collection_id FROM discovery_collections WHERE import_fingerprint = ?")) {
             statement.setString(1, fingerprint);
             try (var result = statement.executeQuery()) {
                 return result.next() ? findById(connection, result.getString(1)) : Optional.empty();
@@ -319,16 +297,13 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
                         result.getInt("radius_meters"),
                         criteria(connection, collectionId),
                         sources(connection, collectionId),
-                        candidates(connection, collectionId))));
+                        candidates(connection, collectionId)));
             }
         }
     }
 
     private List<DiscoveryCollection.Criterion> criteria(Connection connection, String collectionId) throws SQLException {
-        String sql = """
-                SELECT criterion_ref, description, evaluation_mode
-                FROM discovery_criteria WHERE collection_id = ? ORDER BY ordinal
-                """;
+        String sql = "SELECT criterion_ref, description, evaluation_mode FROM discovery_criteria WHERE collection_id = ? ORDER BY ordinal";
         try (var statement = connection.prepareStatement(sql)) {
             statement.setString(1, collectionId);
             try (var result = statement.executeQuery()) {
@@ -345,10 +320,7 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
     }
 
     private List<DiscoveryCollection.Source> sources(Connection connection, String collectionId) throws SQLException {
-        String sql = """
-                SELECT source_ref, url, title, retrieved_at
-                FROM research_sources WHERE collection_id = ? ORDER BY ordinal
-                """;
+        String sql = "SELECT source_ref, url, title, retrieved_at FROM research_sources WHERE collection_id = ? ORDER BY ordinal";
         try (var statement = connection.prepareStatement(sql)) {
             statement.setString(1, collectionId);
             try (var result = statement.executeQuery()) {
@@ -398,12 +370,8 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
         }
     }
 
-    private List<DiscoveryCollection.ExternalId> externalIds(Connection connection, String collectionId,
-                                                             String candidateRef) throws SQLException {
-        String sql = """
-                SELECT provider, external_id FROM candidate_external_ids
-                WHERE collection_id = ? AND candidate_ref = ? ORDER BY ordinal
-                """;
+    private List<DiscoveryCollection.ExternalId> externalIds(Connection connection, String collectionId, String candidateRef) throws SQLException {
+        String sql = "SELECT provider, external_id FROM candidate_external_ids WHERE collection_id = ? AND candidate_ref = ? ORDER BY ordinal";
         try (var statement = connection.prepareStatement(sql)) {
             statement.setString(1, collectionId);
             statement.setString(2, candidateRef);
@@ -418,15 +386,12 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
     }
 
     private List<String> locationSources(Connection connection, String collectionId, String candidateRef) throws SQLException {
-        String sql = """
-                SELECT source_ref FROM candidate_location_sources
-                WHERE collection_id = ? AND candidate_ref = ? ORDER BY ordinal
-                """;
-        return sourceRefs(connection, sql, collectionId, candidateRef, null);
+        return sourceRefs(connection,
+                "SELECT source_ref FROM candidate_location_sources WHERE collection_id = ? AND candidate_ref = ? ORDER BY ordinal",
+                collectionId, candidateRef, null);
     }
 
-    private List<DiscoveryCollection.Claim> claims(Connection connection, String collectionId,
-                                                   String candidateRef) throws SQLException {
+    private List<DiscoveryCollection.Claim> claims(Connection connection, String collectionId, String candidateRef) throws SQLException {
         String sql = """
                 SELECT criterion_ref, status, basis, observed_value_kind, observed_value, note
                 FROM candidate_claims
@@ -458,17 +423,13 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
         }
     }
 
-    private List<String> claimSources(Connection connection, String collectionId, String candidateRef,
-                                      String criterionRef) throws SQLException {
-        String sql = """
-                SELECT source_ref FROM claim_sources
-                WHERE collection_id = ? AND candidate_ref = ? AND criterion_ref = ? ORDER BY ordinal
-                """;
-        return sourceRefs(connection, sql, collectionId, candidateRef, criterionRef);
+    private List<String> claimSources(Connection connection, String collectionId, String candidateRef, String criterionRef) throws SQLException {
+        return sourceRefs(connection,
+                "SELECT source_ref FROM claim_sources WHERE collection_id = ? AND candidate_ref = ? AND criterion_ref = ? ORDER BY ordinal",
+                collectionId, candidateRef, criterionRef);
     }
 
-    private List<String> sourceRefs(Connection connection, String sql, String collectionId,
-                                    String candidateRef, String criterionRef) throws SQLException {
+    private List<String> sourceRefs(Connection connection, String sql, String collectionId, String candidateRef, String criterionRef) throws SQLException {
         try (var statement = connection.prepareStatement(sql)) {
             statement.setString(1, collectionId);
             statement.setString(2, candidateRef);
@@ -505,8 +466,7 @@ public final class SQLiteDiscoveryRepository implements DiscoveryRepository {
         }
     }
 
-    private void setNullableString(java.sql.PreparedStatement statement, int index,
-                                   Optional<String> value) throws SQLException {
+    private void setNullableString(java.sql.PreparedStatement statement, int index, Optional<String> value) throws SQLException {
         if (value.isPresent()) {
             statement.setString(index, value.orElseThrow());
         } else {
