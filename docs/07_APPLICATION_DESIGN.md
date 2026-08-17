@@ -49,6 +49,23 @@ Provider failures map to stable HTTP outcomes: invalid input `400`, rate limit
 
 Provider adapters implement those ports.
 
+### Routing boundary (v0.3.0)
+
+Issue #9 adds `RoutingPort` and `RoutingService`. `RoutingService` validates a
+non-null `RouteRequest`, invokes the port and returns only an Orientation-owned
+`Route`. The public boundary contains no provider exceptions, JSON or encoded
+polyline. The default application wiring is an explicit unconfigured port that
+performs no network request and returns the stable provider-unavailable result;
+Issue #10 will replace it with the Valhalla adapter.
+
+The host endpoint is `POST /api/v1/routes`. It accepts only explicit origin,
+destination and `DRIVING`/`CYCLING`/`WALKING`, and returns an Orientation route
+envelope. Invalid input is `400`, no route is `404`, invalid upstream data is
+`502`, unavailable/timeout is `503`, and retained rate limiting is `429`.
+
+v0.3.0 is route planning/routing, not full live navigation. No current
+PositionFix is automatically read or forwarded, and no route is persisted.
+
 The Reference Host does not call Photon directly. It validates Orientation HTTP
 DTOs before mapping a result to a generic Spatial Feature, and uses a bounded
 AbortController/request sequence so stale responses cannot replace newer state.

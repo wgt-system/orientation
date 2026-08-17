@@ -94,9 +94,21 @@ The scene is input/read state, not shared domain authority.
 
 Current Location is not a Spatial Feature and is supplied/cleared through an independent map-surface API. Replacing or clearing a Spatial Scene does not replace or clear the current PositionFix.
 
-### RouteRequest / RouteResult
+### RouteRequest / Route / RouteGeometry
 
-RouteRequest contains generic geographic routing intent. RouteResult contains generic path output.
+`RouteRequest` is deliberately small in v0.3.0: origin Coordinate, destination
+Coordinate and Travel Profile. It is two-point routing only; it has no
+waypoints, optimization, traffic, toll, transit, date/time or provider costing
+options.
+
+`Route` contains the request endpoints and profile, an Orientation-owned
+decoded `RouteGeometry`, finite non-negative distance metres and finite
+non-negative duration seconds. `RouteGeometry` is an immutable ordered list
+of validated Coordinates with at least two and at most 10,000 points. An
+encoded provider polyline and provider identifiers are not domain requirements.
+
+The initial v0.3.0 implementation proves the generic model and HTTP boundary;
+Valhalla mapping and runtime integration are later work.
 
 The exact versioned transport/API shapes are introduced only with implementation slices.
 

@@ -39,6 +39,21 @@ A provider such as Vocation may publish a rich provider-owned map/spatial projec
 
 The current Vocation `Published Map Projection 1.0` being URL-free is not an Orientation or system invariant. A future provider version may include external resources and richer information when Vocation chooses.
 
+## Routing host boundary (v0.3.0)
+
+Issue #9 introduces the narrow, unversioned-in-bridge HTTP host boundary
+`POST /api/v1/routes`. Its request contains explicit origin and destination
+Coordinates plus the generic `TravelProfile`; its response contains a
+provider-neutral Route with decoded bounded geometry, distance and duration.
+It does not modify `orientation.host-bridge` 1.0 or any JSON schema in this
+repository. Valhalla wire JSON, provider costing names, encoded polylines and
+provider identifiers remain behind the later #10 adapter.
+
+Stable HTTP outcomes are: `400` invalid Orientation request, `404` no route,
+`502` invalid provider response, `503` unavailable or timeout, and `429` rate
+limited where the provider abstraction retains that distinction. Error bodies
+contain only stable Orientation codes/messages.
+
 ## Contract requirements
 
 When a contract is frozen:

@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2 and v0.2.0 released. v0.2.0 was released on 2026-08-16.
+**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2, v0.2.0 and v0.3.0 released. v0.3.0 was accepted on 2026-08-17.
 
 Milestone names, when created, use semantic versions only.
 
@@ -143,32 +143,59 @@ Vocation remains authoritative for Work Location/Precision and all job-market se
 
 ## v0.3.0
 
-Focus: WGT map migration.
+Focus: Routing. Released and accepted on 2026-08-17.
 
-- integrate Orientation map surface into WGT product map capability;
-- preserve WGT shell/navigation/platform ownership;
-- pass Windows and physical-iPhone gates;
-- retire Mapsui generic renderer once no accepted path requires it.
+v0.3.0 completes provider-neutral route planning/routing, not full live
+navigation. The four completed work packages are:
 
-## v0.4.0
+1. **#10 — Define generic routing model and HTTP boundary**: two-point
+   `RouteRequest`, generic `TravelProfile`, `Route`, bounded decoded
+   `RouteGeometry`, `RoutingPort`, `RoutingService`, stable failures and
+   `POST /api/v1/routes`, proven with deterministic fake-port tests.
+2. **#11 — Integrate Valhalla routing provider**: Valhalla 3.8.3 behind the
+   infrastructure boundary, pinned reviewed runtime and retained Hamburg OSM
+   dataset, bounded provider responses/timeouts, provider-neutral failure
+   mapping, deterministic adapter tests and real-provider smoke for DRIVING,
+   CYCLING and WALKING.
+3. **#12 — Render generic routes on the Orientation map surface**: provider-
+   neutral route overlay lifecycle, route line/casing, origin/destination,
+   deterministic replace/clear behavior, lifecycle cleanup and ordinary plus
+   antimeridian-safe viewport fitting while preserving Spatial Scene and Current
+   Position overlays.
+4. **#13 — Integrate route planning into the Orientation Reference Host**:
+   explicit Start/Destination search and selection, explicit profile choice,
+   strict relative Orientation API calls, route summary/rendering, distinct
+   controlled failures, stale-request cancellation, route replacement/clear and
+   responsive desktop/mobile host usability.
 
-Focus: Navigate.
+Dependency graph:
 
-- Valhalla deployment/adapter;
-- generic route request/result;
-- route overlay;
-- distance/duration;
-- current-location -> destination scenario;
-- failure/timeout/provider tests.
+```text
+#10
+├── #11
+└── #12
+     \
+      #11 + #12 -> #13
+```
 
-## v0.5.0
+Acceptance is complete on integrated `dev` commit
+`7e6902bb8c1015aef506bd5a94ede702c705c198`: normal backend/map CI passes and
+the real Valhalla 3.8.3 + deterministic Photon + Orientation backend +
+production Reference Host + Chrome smoke passes. The real-provider smoke proves
+all three profiles and decoded endpoint geometry; the browser smoke proves
+explicit endpoint selection, visible route rendering, profile invalidation,
+route replacement/clear, preservation of Place/Reverse/Current Position
+behavior and desktop/mobile scrolling.
 
-Focus: Discover.
+Not included in v0.3.0: turn-by-turn guidance, live GPS rerouting, automatic
+PositionFix forwarding, persistence, OS/device permission ownership,
+foreign-domain semantics or a new Host Bridge version. `orientation.host-bridge`
+remains 1.0.
 
-- provider decision for place/POI discovery and geocoding as needed;
-- place search/nearby;
-- reverse geocoding;
-- provider attribution/rate/caching behavior.
+Future work is intentionally unversioned until the released milestone is
+reviewed. Consumer integration gates, standalone packaging, nearby/POI
+discovery and any future navigation depth must be justified as concrete slices
+rather than pre-created milestone ladders.
 
 ## Sequencing rule
 

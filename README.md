@@ -107,3 +107,36 @@ Vocation/WGT migration or standalone-product packaging. The
 `orientation.host-bridge` 1.0 contract and schemas are unchanged.
 
 See [`docs/INDEX.md`](docs/INDEX.md).
+
+## v0.3.0
+
+Focus: Routing. Released and accepted on 2026-08-17.
+
+The release completes provider-neutral route planning with two-point
+`RouteRequest` semantics, DRIVING/CYCLING/WALKING travel profiles, bounded
+decoded route geometry, distance/duration, `RoutingPort`, `RoutingService` and
+the narrow `POST /api/v1/routes` host endpoint.
+
+Valhalla 3.8.3 is the first routing provider behind the Orientation boundary.
+The development/smoke runtime uses the reviewed upstream
+`ghcr.io/valhalla/valhalla-scripted:3.8.3` image and a retained Hamburg monthly
+OpenStreetMap snapshot. Valhalla costing names, error codes, JSON and encoded
+polyline6 geometry remain infrastructure details; decoded Orientation geometry
+crosses `RoutingPort`.
+
+The Map Surface renders generic route lines plus origin/destination points with
+replace, clear, lifecycle and antimeridian-safe viewport behavior. The Reference
+Host provides explicit Start and Destination searches and selection, explicit
+profile choice, distance/duration/profile summaries, stale-request protection,
+controlled routing failure states and explicit route clearing. Existing Place
+Search, Reverse Geocoding, Spatial Scene interaction and host-supplied Current
+Position remain available.
+
+Acceptance includes deterministic backend/map CI, real Valhalla routes for all
+three profiles, production Reference Host execution in Chrome, and visible
+route-render/replacement/clear evidence. The post-merge `dev` CI and complete
+Valhalla + browser smoke both pass on the accepted routing commit.
+
+v0.3.0 is route planning/routing, not full live navigation. It does not add
+turn-by-turn guidance, live GPS rerouting, persistence, OS/device permission
+ownership or foreign-domain semantics. `orientation.host-bridge` remains 1.0.

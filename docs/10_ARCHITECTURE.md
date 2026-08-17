@@ -72,6 +72,17 @@ Valhalla is the selected upstream routing engine candidate/baseline. Orientation
 
 Valhalla source is not copied into this repository.
 
+The v0.3.0 #9 slice establishes the Java domain/application boundary before
+provider integration: `RouteRequest`, `TravelProfile`, `RouteGeometry`,
+`Route`, `RoutingPort` and `RoutingService`, exposed through
+`POST /api/v1/routes`. The route geometry is decoded and bounded in Orientation
+terms. No Valhalla URL, runtime, container, DTO, polyline decoder, dataset or
+external request is part of #9. Those belong to #10.
+
+v0.3.0 is route planning/routing, not full live navigation. Route rendering is
+owned by the separate #11 map-surface slice, and the Reference Host workflow
+by #12.
+
 ## Process/deployment model
 
 A bounded context is not a single process prescription.

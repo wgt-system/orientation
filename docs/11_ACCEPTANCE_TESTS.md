@@ -1,6 +1,6 @@
 # Orientation – Acceptance Tests
 
-**Status:** Orientation v0.1.0 published baseline; Issues #1–#4 acceptance evidence is recorded below.
+**Status:** Orientation v0.1.0 through v0.3.0 acceptance evidence is recorded below.
 
 ## Architecture invariants
 
@@ -121,6 +121,76 @@ autocomplete, PositionFix forwarding, routing, persistence or foreign-domain
 migration is included. OpenFreeMap Liberty, MapLibre 6 worker/vector readiness,
 current-location visualization, `orientation.host-bridge` 1.0 and all schemas
 remain unchanged.
+
+## v0.3.0 — Routing
+
+Focus: route planning/routing, not full live navigation. Released and accepted
+on 2026-08-17.
+
+### Issue #10 — generic routing boundary
+
+Accepted provider-neutral semantics include the three generic Travel Profiles,
+two-point Route Requests, immutable bounded Route Geometry (2–10,000
+Coordinates), finite non-negative route distance/duration, `RoutingPort`,
+`RoutingService`, stable routing failures and `POST /api/v1/routes`.
+
+The HTTP boundary accepts only Orientation DTOs, validates coordinates/profile,
+returns decoded Orientation Route geometry, and maps failures to stable
+Orientation outcomes. No Valhalla term, provider JSON, encoded polyline,
+PositionFix, persistence or network-provider detail crosses this boundary.
+
+### Issue #11 — Valhalla provider
+
+Valhalla 3.8.3 is accepted as the first replaceable routing provider behind the
+Orientation infrastructure boundary. The reviewed runtime uses
+`ghcr.io/valhalla/valhalla-scripted:3.8.3` plus retained Hamburg monthly OSM
+data. Adapter tests cover DRIVING/CYCLING/WALKING profile mapping, bounded
+responses, timeouts/errors, stable failure mapping and full polyline6 decoding
+before a Route crosses `RoutingPort`.
+
+The real provider smoke passes through Orientation for all supported profiles:
+
+- DRIVING: 136 decoded points, 2251.0 m, 302.823 s;
+- CYCLING: 93 decoded points, 1342.0 m, 314.502 s;
+- WALKING: 58 decoded points, 1103.0 m, 781.912 s.
+
+Decoded route endpoints are verified near the requested coordinates.
+
+### Issue #12 — route rendering
+
+The Map Surface accepts provider-neutral decoded Route geometry and renders a
+route casing/line plus origin/destination points. Acceptance covers validated
+immutable route snapshots, deterministic set/replace/clear behavior, lifecycle
+cleanup, preservation of Spatial Scene and Current Position overlays, and
+ordinary plus antimeridian-safe viewport fitting.
+
+Integrated visible evidence through the Reference Host proves real route
+rendering. With an unchanged fitted map viewport, clearing the Driving route
+changed 5,935 map pixels and clearing the Cycling route changed 3,421 map
+pixels, while measured normal screenshot drift was 0 pixels.
+
+### Issue #13 — Reference Host route planning
+
+The accepted Reference Host flow provides explicit Start and Destination place
+searches and user selection, explicit DRIVING/CYCLING/WALKING profile choice,
+relative Orientation route API calls, distance/duration/profile summaries,
+controlled invalid-request/no-route/rate-limit/unavailable/provider-response
+states, stale-request cancellation and explicit route clear/replacement.
+
+The integrated production-browser smoke uses a deterministic Photon provider,
+real Valhalla 3.8.3, the Orientation backend, production Vite Reference Host and
+Chrome/ChromeDriver. It proves existing general Place Search, Reverse Lookup and
+Current Position behavior, explicit Start/Destination selection, visible
+Driving route render and clear, profile-change invalidation, visible Cycling
+replacement and clear, plus constrained Desktop and mobile scrolling behavior.
+
+The normal post-merge `dev` CI and the complete Valhalla + production-browser
+smoke both pass on commit `7e6902bb8c1015aef506bd5a94ede702c705c198`.
+
+Preserved release invariants: `orientation.host-bridge` remains 1.0; Valhalla
+wire/provider semantics remain infrastructure-only; v0.3.0 adds no turn-by-turn
+guidance, live GPS rerouting, persistence, OS/device permission ownership or
+foreign-domain semantics.
 
 ## Future integration gates
 
