@@ -5,21 +5,35 @@ on:
     paths:
       - ".github/workflows/motis-smoke.yml"
       - ".github/scripts/motis-journey-smoke.py"
+      - ".github/scripts/standalone-journey-browser-smoke.py"
       - "backend/src/main/java/system/wgt/orientation/application/journey/**"
       - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
       - "backend/src/main/java/system/wgt/orientation/host/journey/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
       - "backend/src/main/resources/application.yaml"
+      - "contracts/examples/spatial-research-v1.valid.json"
+      - "map/app.html"
+      - "map/src/app/**"
+      - "map/src/lib/journey-overlay.ts"
+      - "map/src/lib/map-surface.ts"
+      - "map/vite.config.ts"
   push:
     branches: [dev, main]
     paths:
       - ".github/workflows/motis-smoke.yml"
       - ".github/scripts/motis-journey-smoke.py"
+      - ".github/scripts/standalone-journey-browser-smoke.py"
       - "backend/src/main/java/system/wgt/orientation/application/journey/**"
       - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
       - "backend/src/main/java/system/wgt/orientation/host/journey/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
       - "backend/src/main/resources/application.yaml"
+      - "contracts/examples/spatial-research-v1.valid.json"
+      - "map/app.html"
+      - "map/src/app/**"
+      - "map/src/lib/journey-overlay.ts"
+      - "map/src/lib/map-surface.ts"
+      - "map/vite.config.ts"
   workflow_dispatch:
 
 permissions:
@@ -42,6 +56,11 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: map/package-lock.json
 
       - name: Download and verify pinned MOTIS runtime and test data
         run: |
@@ -121,11 +140,29 @@ jobs:
           cat /tmp/motis-server.log
           exit 1
 
+      - name: Start deterministic Aachen Photon stub
+        run: |
+          python3 .github/scripts/standalone-journey-browser-smoke.py photon \
+            /tmp/orientation-motis-smoke/request.json > /tmp/journey-photon.log 2>&1 &
+          echo $! > /tmp/journey-photon.pid
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error "http://127.0.0.1:8998/api?q=health&limit=1" > /tmp/journey-photon-health.json; then
+              cat /tmp/journey-photon-health.json
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Journey Photon stub did not become ready."
+          exit 1
+
       - name: Start Orientation backend against local MOTIS
         run: |
+          rm -f /tmp/orientation-motis.db
           cd backend
           SERVER_PORT=8082 \
+          ORIENTATION_DATABASE_PATH=/tmp/orientation-motis.db \
           ORIENTATION_MOTIS_BASE_URL=http://127.0.0.1:8080 \
+          ORIENTATION_PHOTON_BASE_URL=http://127.0.0.1:8998 \
             ./mvnw --batch-mode spring-boot:run > /tmp/orientation-motis.log 2>&1 &
           echo $! > /tmp/orientation-motis.pid
 
@@ -162,6 +199,44 @@ jobs:
           head -n 160 /tmp/orientation-motis-smoke/response.pretty.json
           python3 .github/scripts/motis-journey-smoke.py verify /tmp/orientation-motis-smoke/response.json
 
+      - name: Build and start production standalone Orientation app
+        run: |
+          cd map
+          npm ci
+          npm run build
+          ORIENTATION_BACKEND_URL=http://127.0.0.1:8082 \
+            npm run preview -- --host 127.0.0.1 --port 4174 > /tmp/journey-app.log 2>&1 &
+          echo $! > /tmp/journey-app.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:4174/app.html > /tmp/journey-app.html; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Standalone Orientation browser preview did not become ready."
+          exit 1
+
+      - name: Start ChromeDriver
+        run: |
+          "$CHROMEWEBDRIVER/chromedriver" --port=9515 --allowed-origins='*' > /tmp/journey-chromedriver.log 2>&1 &
+          echo $! > /tmp/journey-chromedriver.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:9515/status > /tmp/journey-chromedriver-status.json; then
+              cat /tmp/journey-chromedriver-status.json
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ChromeDriver did not become ready."
+          exit 1
+
+      - name: Plan and render a real Journey through the standalone app
+        run: |
+          python3 .github/scripts/standalone-journey-browser-smoke.py run \
+            /tmp/orientation-motis-smoke/request.json \
+            /tmp/orientation-motis-smoke/request-metadata.json \
+            contracts/examples/spatial-research-v1.valid.json
+
       - name: Diagnostics
         if: failure()
         run: |
@@ -173,13 +248,22 @@ jobs:
           tail -n 240 /tmp/motis-import.log 2>/dev/null || true
           echo '=== MOTIS server ==='
           tail -n 240 /tmp/motis-server.log 2>/dev/null || true
+          echo '=== Journey Photon ==='
+          tail -n 160 /tmp/journey-photon.log 2>/dev/null || true
           echo '=== Orientation ==='
           tail -n 240 /tmp/orientation-motis.log 2>/dev/null || true
           echo '=== Journey response ==='
           cat /tmp/orientation-motis-smoke/response.json 2>/dev/null || true
+          echo '=== Standalone app ==='
+          tail -n 160 /tmp/journey-app.log 2>/dev/null || true
+          echo '=== ChromeDriver ==='
+          tail -n 160 /tmp/journey-chromedriver.log 2>/dev/null || true
 
       - name: Cleanup
         if: always()
         run: |
+          if [ -f /tmp/journey-chromedriver.pid ]; then kill "$(cat /tmp/journey-chromedriver.pid)" 2>/dev/null || true; fi
+          if [ -f /tmp/journey-app.pid ]; then kill "$(cat /tmp/journey-app.pid)" 2>/dev/null || true; fi
           if [ -f /tmp/orientation-motis.pid ]; then kill "$(cat /tmp/orientation-motis.pid)" 2>/dev/null || true; fi
+          if [ -f /tmp/journey-photon.pid ]; then kill "$(cat /tmp/journey-photon.pid)" 2>/dev/null || true; fi
           if [ -f /tmp/motis.pid ]; then kill "$(cat /tmp/motis.pid)" 2>/dev/null || true; fi
