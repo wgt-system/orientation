@@ -1,145 +1,120 @@
 # Orientation – Threat Model
 
-**Status:** Bootstrap baseline
+**Status:** current post-v0.5 local-first baseline.
 
 ## Sensitive assets
 
 - precise current location;
+- place-search text;
 - route origins/destinations;
-- provider API keys/tokens;
-- external-resource URIs;
-- provider-derived place/address data;
-- foreign domain information embedded in map scenes.
+- Journey departure/arrival time;
+- imported personal discovery collections and provenance;
+- external-resource URIs and provider-derived place/address data.
 
-## Main threats
+## Location and mobility privacy
 
-### Location privacy
-
-Precise current location can reveal highly sensitive personal information.
+Searches and navigation requests can reveal sensitive personal intent even without a stored PositionFix.
 
 Controls:
 
-- no persistence/history by default;
-- host owns permission acquisition;
-- Orientation accepts only validated finite coordinates, non-negative accuracy and serialized UTC timestamps;
-- do not log coordinates at normal info level;
-- explicit retention decision required before storing position history;
-- avoid sending current position to providers that do not require it.
+- Orientation backend binds to `127.0.0.1` by default;
+- MOTIS and Valhalla default to explicit loopback endpoints;
+- no automatic hosted provider fallback;
+- Place Search and Reverse Geocoding use the local MOTIS provider path;
+- direct Route uses local Valhalla by default;
+- public-transit Journey uses local MOTIS by default;
+- no position history persistence unless a later explicit retention decision allows it;
+- do not log full search text, coordinates or Journey request details at normal INFO level;
+- host owns current-location permission acquisition.
 
-### Malicious/untrusted rich content
+A deliberately configured non-loopback provider is an operator/deployment choice and must not be treated as privacy-equivalent to the default local topology.
+
+## Intentional external basemap
+
+OpenFreeMap Liberty is the sole intentional external runtime dependency in the default browser product.
+
+Controls:
+
+- only hosted map style/tile resources are requested;
+- no Orientation discovery collection, search string, Route request or Journey time is serialized into tile requests by application code;
+- map-resource failure is surfaced as renderer failure rather than triggering another provider;
+- attribution/provider requirements remain visible and respected;
+- remote styles are infrastructure input, not trusted application code.
+
+The visible viewport necessarily determines which remote map resources are requested. An offline/private basemap requires a separate caching/packaging capability.
+
+## External research interaction
+
+Orientation can generate a prompt for explicit user-controlled external research. This is not an automatic backend API call.
+
+Controls:
+
+- external research is initiated explicitly by the user;
+- structured results are untrusted until strict contract/semantic validation succeeds;
+- imported claims preserve provenance and uncertainty;
+- heuristics must not silently become asserted sensitive characteristics;
+- rejected imports do not partially mutate persisted Orientation state.
+
+## Malicious/untrusted rich content
 
 Provider/domain strings can reach marker/details UI.
 
 Controls:
 
-- render text as text, not arbitrary HTML;
-- do not accept executable HTML/script fragments in Spatial Feature contracts;
-- validate resource URIs and allow only HTTP(S) schemes in the generic web-resource model;
-- construct details controls with DOM text nodes and buttons, never provider HTML or CSS;
-- keep resource/action execution host-mediated.
+- render text as text, never arbitrary provider HTML/CSS;
+- Spatial Feature contracts reject executable fragments;
+- generic web resources accept only reviewed safe URI schemes;
+- resource/action execution remains host-mediated.
 
-### External URLs
-
-Controls:
-
-- validate URI scheme;
-- prefer HTTPS for external web resources;
-- reject script/data/file schemes at generic web-resource boundaries unless a separate host-specific decision exists;
-- host decides actual navigation/open behavior.
-
-### Provider/API abuse
+## Provider/API abuse and malformed responses
 
 Controls:
 
-- timeouts;
-- bounded retries where deliberately introduced;
-- rate limiting/backoff where provider requires it;
-- no secrets in logs/contracts;
-- explicit trusted provider configuration;
-- bounded provider response bodies before parsing.
+- finite connect/read timeouts;
+- bounded provider response bodies before parsing;
+- stable Orientation failure kinds instead of raw provider bodies;
+- provider DTOs remain inside infrastructure;
+- no arbitrary user-supplied backend fetch target;
+- no automatic retries unless separately justified;
+- domain geometry/list bounds remain enforced after translation.
 
-For v0.2.0, explicitly submitted search text and explicit reverse-geocoding
-coordinates are sent to the trusted configured Photon endpoint. PositionFix,
-current device location, identity and analytics identifiers are not forwarded
-automatically. Search input is bounded, provider URLs are not caller supplied,
-and full search text is not logged at INFO by default.
+MOTIS handles both Place and Journey provider roles but the application ports remain separate. A malformed geocoding result must not weaken Journey invariants, and vice versa.
 
-The Reference Host uses only relative Orientation API URLs. Vite's local dev
-and preview proxy are configuration for the development host; no Photon URL or
-provider secret is exposed through `VITE_*` browser configuration. Search is
-explicit-submit only, and reverse geocoding sends only the explicitly chosen
-map-center Coordinate. A PositionFix is never used as a search bias or reverse
-request.
+## SSRF / provider configuration
 
-For v0.3.0, Issue #10 established the local provider-neutral routing boundary.
-Issue #11 is the explicit Valhalla provider boundary: only the origin,
-destination and generic Travel Profile from an explicit Route Request are
-translated into a request to the trusted configured Valhalla endpoint. The
-default development endpoint is local (`http://localhost:8002`); deployment may
-configure another trusted endpoint. PositionFix, identity, analytics identifiers,
-search history and foreign-domain state are not forwarded implicitly.
-
-The Valhalla adapter uses finite connect/read timeouts, does not introduce
-automatic retries, bounds provider responses to 2 MiB before parsing, reduces
-provider errors to stable Orientation failure kinds, decodes polyline6 before
-crossing `RoutingPort`, and enforces the existing 10,000-Coordinate Route
-Geometry bound. Raw provider response bodies, error details and route request
-coordinates are not exposed in stable error messages.
-
-### SSRF
-
-If backend adapters accept configured URLs:
-
-- do not allow arbitrary user/provider scene data to become backend fetch targets;
-- constrain provider endpoints through trusted configuration;
-- do not follow redirects unless a provider-specific review requires them;
-- validate deployment network targets where relevant.
-
-Photon and Valhalla provider URLs are application configuration, not request
-parameters. The JDK HTTP clients used by the current adapters do not opt into
-redirect following.
-
-### WebView/browser bridge
+MOTIS and Valhalla base URLs are application configuration, not request parameters. User/imported content cannot select an upstream target.
 
 Controls:
 
-- narrow bridge/event contract;
-- validate all inbound messages;
-- no arbitrary JavaScript evaluation as a domain command channel;
-- Content Security Policy for reference/embedded host where practical.
+- default to loopback targets;
+- deployment owners must review any configured non-loopback target;
+- do not turn spatial-resource URLs or imported source URLs into backend fetch targets;
+- current JDK clients do not opt into arbitrary redirect following.
 
-The accepted Host Bridge 1.0 boundary treats inbound JSON as untrusted: it
-checks contract/version/type, closed payload structure, finite coordinates and
-numbers, existing scene/resource/PositionFix rules, safe URI schemes and
-canonical timestamps before invoking renderer state. Dispatch uses an explicit
-message-type switch; it does not use prototype lookup, eval, Function
-constructors, arbitrary navigation or fetch. Bridge errors expose stable safe
-codes/messages without raw payloads or stacks.
+## WebView/browser bridge
 
-When embedded, the parent page is the authorized host context. Outbound
-`postMessage` uses `"*"` deliberately so the same artifact works from local
-files and generic WebViews; the bridge does not send scene or current-position
-data without a corresponding host command or user interaction.
-
-### Tile/style supply chain
+The accepted Host Bridge 1.0 treats inbound JSON as untrusted and validates contract/version/type, closed payload structure, finite coordinates/numbers, safe URI schemes and canonical timestamps before state mutation.
 
 Controls:
 
-- explicit provider configuration and attribution;
-- fail visibly when required resources are unavailable;
-- do not treat remote styles as trusted application code.
+- narrow command/event contract;
+- no arbitrary JavaScript evaluation;
+- explicit message-type dispatch;
+- safe stable errors without raw payloads/stacks;
+- host remains responsible for product/domain navigation and OS permission policy.
 
-The v0.1.1 default style is OpenFreeMap Liberty, backed by external
-OpenStreetMap/OpenMapTiles resources. Requests are limited to the visible map
-viewport and contain no PositionFix data, analytics or telemetry. Availability
-is best-effort; a renderer error is surfaced rather than treated as trusted
-application state.
-
-### Cross-context leakage
+## Cross-context leakage
 
 Controls:
 
 - no foreign DB access;
-- no broad serialization of foreign aggregates;
-- provider decides what may be published into a spatial projection;
-- Orientation stores no foreign authoritative state by default.
+- no broad persistence of foreign aggregates;
+- provider contexts decide what they project spatially;
+- Orientation SQLite stores Orientation-owned discovery state only;
+- technical MOTIS/Valhalla indexes are not authoritative business data.
+
+## Mobile deployment boundary
+
+Responsive browser support does not justify exposing a desktop backend or provider runtime on the LAN by default.
+
+A future phone workflow must choose an explicit trusted topology (for example a deliberately paired companion or bounded on-device regional runtime). It must not weaken loopback defaults merely to make ad-hoc LAN access convenient.

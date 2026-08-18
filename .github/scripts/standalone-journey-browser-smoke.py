@@ -5,9 +5,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
 
 WEBDRIVER = "http://127.0.0.1:9515"
 APP_URL = "http://127.0.0.1:4174/app.html"
@@ -15,50 +13,6 @@ APP_URL = "http://127.0.0.1:4174/app.html"
 
 def load_json(path: str) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
-
-
-def photon_feature(name: str, longitude: float, latitude: float) -> dict:
-    return {
-        "type": "Feature",
-        "geometry": {"type": "Point", "coordinates": [longitude, latitude]},
-        "properties": {
-            "osm_type": "N",
-            "osm_id": "9501",
-            "name": name,
-            "city": "Aachen",
-            "state": "North Rhine-Westphalia",
-            "country": "Germany",
-            "countrycode": "DE",
-        },
-    }
-
-
-def serve_photon(request_path: str) -> None:
-    request = load_json(request_path)
-    origin = request["origin"]
-
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:
-            if urlparse(self.path).path != "/api":
-                self.send_error(404)
-                return
-            payload = {
-                "type": "FeatureCollection",
-                "features": [photon_feature("Journey Start", origin["longitude"], origin["latitude"])],
-            }
-            body = json.dumps(payload).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-        def log_message(self, format: str, *args: object) -> None:
-            print(format % args, flush=True)
-
-    server = ThreadingHTTPServer(("127.0.0.1", 8998), Handler)
-    print("Journey Photon stub listening on 127.0.0.1:8998", flush=True)
-    server.serve_forever()
 
 
 def webdriver(method: str, path: str, payload: dict | None = None):
@@ -156,10 +110,7 @@ def make_bundle(request: dict, metadata: dict, example_path: str) -> dict:
     bundle["researchedAt"] = "2026-08-17T20:00:00Z"
     bundle["question"]["questionRef"] = "aachen-journey-smoke"
     bundle["question"]["text"] = "Deterministic Aachen public-transit Journey acceptance destination."
-    bundle["question"]["area"]["center"] = {
-        "label": origin_name,
-        "coordinate": origin,
-    }
+    bundle["question"]["area"]["center"] = {"label": origin_name, "coordinate": origin}
     bundle["question"]["area"]["radiusMeters"] = 25000
     candidate = bundle["candidates"][0]
     candidate["candidateRef"] = "journey-destination"
@@ -174,8 +125,55 @@ def make_bundle(request: dict, metadata: dict, example_path: str) -> dict:
 
 
 def local_datetime_value(offset_timestamp: str) -> str:
-    parsed = datetime.fromisoformat(offset_timestamp)
-    return parsed.strftime("%Y-%m-%dT%H:%M")
+    return datetime.fromisoformat(offset_timestamp).strftime("%Y-%m-%dT%H:%M")
+
+
+def verify_workspace_layout(session: str) -> None:
+    desktop = execute(
+        session,
+        """
+        const research=document.querySelector('#research-panel');
+        const navigate=document.querySelector('#navigate-card');
+        const map=document.querySelector('#app-map');
+        const nav=document.querySelector('.app-jump-nav');
+        if(!research || !navigate || !map || !nav) return null;
+        return {
+          researchOverflow:getComputedStyle(research).overflowY,
+          researchScrollable:research.scrollHeight > research.clientHeight,
+          navigateBeforeMap:navigate.getBoundingClientRect().top < map.getBoundingClientRect().top,
+          jumpLinks:nav.querySelectorAll('a').length
+        };
+        """,
+    )
+    if not desktop or desktop["researchOverflow"] != "auto" or not desktop["researchScrollable"]:
+        raise AssertionError(f"Desktop Research column is not independently scrollable: {desktop}")
+    if not desktop["navigateBeforeMap"] or desktop["jumpLinks"] != 3:
+        raise AssertionError(f"Desktop Navigate discoverability regression: {desktop}")
+
+    webdriver("POST", f"/session/{session}/window/rect", {"width": 390, "height": 844})
+    mobile = wait_for(
+        session,
+        "mobile document-scroll layout",
+        """
+        const research=document.querySelector('#research-panel');
+        if(!research) return null;
+        const bodyOverflow=getComputedStyle(document.body).overflowY;
+        const researchOverflow=getComputedStyle(research).overflowY;
+        return (document.documentElement.scrollHeight > window.innerHeight && researchOverflow !== 'auto')
+          ? {bodyOverflow, researchOverflow, scrollHeight:document.documentElement.scrollHeight}
+          : null;
+        """,
+        timeout=10,
+    )
+    click(session, '.app-jump-nav a[href="#navigate-card"]')
+    wait_for(
+        session,
+        "mobile Navigate jump",
+        "return location.hash === '#navigate-card' && document.querySelector('#navigate-card').getBoundingClientRect().top < window.innerHeight;",
+        timeout=5,
+    )
+    print("PASS: standalone layout desktop scroll + mobile document navigation", desktop, mobile)
+    webdriver("POST", f"/session/{session}/window/rect", {"width": 1440, "height": 1000})
 
 
 def open_app(session: str) -> None:
@@ -185,9 +183,10 @@ def open_app(session: str) -> None:
     wait_for(session, "MapLibre canvas", "return Boolean(document.querySelector('#app-map .maplibregl-canvas'));", timeout=30)
     if execute(session, "return !document.querySelector('#app-map-status').hidden;"):
         raise AssertionError(f"Map reported error: {text(session, '#app-map-status')}")
+    verify_workspace_layout(session)
 
 
-def select_origin_and_destination(session: str, bundle: dict) -> None:
+def select_origin_and_destination(session: str, bundle: dict, metadata: dict) -> None:
     set_value(session, "#bundle-json", json.dumps(bundle))
     click(session, "#import-bundle")
     wait_for(session, "Journey discovery import", "return document.querySelector('#import-status')?.textContent?.includes('Collection imported');")
@@ -195,11 +194,12 @@ def select_origin_and_destination(session: str, bundle: dict) -> None:
     click(session, "#candidate-list .candidate-button")
     wait_for(session, "Journey destination selection", "return document.querySelector('#selected-destination')?.textContent?.startsWith('Journey Destination');")
 
-    set_value(session, "#route-origin-query", "Journey Start")
+    origin_name = metadata.get("originStopName") or "Aachen"
+    set_value(session, "#route-origin-query", origin_name)
     click(session, "#route-origin-search")
-    wait_for(session, "Journey origin result", "return document.querySelectorAll('#route-origin-results .place-result').length === 1;")
+    wait_for(session, "Journey origin result", "return document.querySelectorAll('#route-origin-results .place-result').length >= 1;", timeout=30)
     click(session, "#route-origin-results .place-result")
-    wait_for(session, "Journey origin selection", "return document.querySelector('#route-origin-status')?.textContent?.includes('Selected: Journey Start');")
+    wait_for(session, "Journey origin selection", "return document.querySelector('#route-origin-status')?.textContent?.startsWith('Selected:');")
 
 
 def request_and_show_journey(session: str, request: dict) -> int:
@@ -241,7 +241,7 @@ def run_browser(request_path: str, metadata_path: str, example_path: str) -> Non
     print("Chrome session", session, "standalone Journey acceptance")
     try:
         open_app(session)
-        select_origin_and_destination(session, bundle)
+        select_origin_and_destination(session, bundle, metadata)
         alternatives = request_and_show_journey(session, request)
 
         if alternatives > 1:
@@ -275,17 +275,12 @@ def run_browser(request_path: str, metadata_path: str, example_path: str) -> Non
 def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
-    photon = subparsers.add_parser("photon")
-    photon.add_argument("request")
     run = subparsers.add_parser("run")
     run.add_argument("request")
     run.add_argument("metadata")
     run.add_argument("example")
     args = parser.parse_args()
-    if args.command == "photon":
-        serve_photon(args.request)
-    else:
-        run_browser(args.request, args.metadata, args.example)
+    run_browser(args.request, args.metadata, args.example)
 
 
 if __name__ == "__main__":

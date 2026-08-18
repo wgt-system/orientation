@@ -15,16 +15,24 @@ public class MotisConfiguration {
 
     @Bean
     MotisJourneyAdapter motisJourneyAdapter(ObjectMapper objectMapper, MotisProperties properties) {
+        return new MotisJourneyAdapter(client(properties), objectMapper);
+    }
+
+    @Bean
+    MotisPlaceAdapter motisPlaceAdapter(ObjectMapper objectMapper, MotisProperties properties) {
+        return new MotisPlaceAdapter(client(properties), objectMapper);
+    }
+
+    private RestClient client(MotisProperties properties) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.getConnectTimeout())
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(properties.getReadTimeout());
-        RestClient client = RestClient.builder()
+        return RestClient.builder()
                 .baseUrl(properties.getBaseUrl())
                 .requestFactory(requestFactory)
                 .defaultHeader("User-Agent", properties.getUserAgent())
                 .build();
-        return new MotisJourneyAdapter(client, objectMapper);
     }
 }

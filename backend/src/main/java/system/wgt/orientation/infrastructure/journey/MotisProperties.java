@@ -6,7 +6,7 @@ import java.time.Duration;
 
 @ConfigurationProperties(prefix = "orientation.motis")
 public class MotisProperties {
-    private String baseUrl = "http://localhost:8081";
+    private String baseUrl = "http://127.0.0.1:8081";
     private Duration connectTimeout = Duration.ofSeconds(3);
     private Duration readTimeout = Duration.ofSeconds(15);
     private String userAgent = "wgt-system-orientation/0.5.0 (+https://github.com/wgt-system/orientation)";
