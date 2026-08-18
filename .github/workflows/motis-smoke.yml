@@ -7,8 +7,11 @@ on:
       - ".github/scripts/motis-journey-smoke.py"
       - ".github/scripts/standalone-journey-browser-smoke.py"
       - "backend/src/main/java/system/wgt/orientation/application/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/application/place/**"
       - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/place/**"
       - "backend/src/main/java/system/wgt/orientation/host/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/host/place/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
       - "backend/src/main/resources/application.yaml"
       - "contracts/examples/spatial-research-v1.valid.json"
@@ -24,8 +27,11 @@ on:
       - ".github/scripts/motis-journey-smoke.py"
       - ".github/scripts/standalone-journey-browser-smoke.py"
       - "backend/src/main/java/system/wgt/orientation/application/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/application/place/**"
       - "backend/src/main/java/system/wgt/orientation/domain/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/place/**"
       - "backend/src/main/java/system/wgt/orientation/host/journey/**"
+      - "backend/src/main/java/system/wgt/orientation/host/place/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
       - "backend/src/main/resources/application.yaml"
       - "contracts/examples/spatial-research-v1.valid.json"
@@ -120,7 +126,6 @@ jobs:
           )
           config.write_text(text, encoding="utf-8")
           print(f"Pinned MOTIS timetable window to {service_date} + 7 days")
-          print(text)
           PY
           ./motis import > /tmp/motis-import.log 2>&1
 
@@ -130,29 +135,14 @@ jobs:
           ./motis server > /tmp/motis-server.log 2>&1 &
           echo $! > /tmp/motis.pid
           for attempt in $(seq 1 90); do
-            if (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1; then
-              echo "MOTIS is accepting connections on 8080."
+            if curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health > /tmp/motis-health.json 2>/dev/null; then
+              cat /tmp/motis-health.json
               exit 0
             fi
             sleep 2
           done
-          echo "MOTIS did not become reachable within three minutes."
+          echo "MOTIS did not become healthy within three minutes."
           cat /tmp/motis-server.log
-          exit 1
-
-      - name: Start deterministic Aachen Photon stub
-        run: |
-          python3 .github/scripts/standalone-journey-browser-smoke.py photon \
-            /tmp/orientation-motis-smoke/request.json > /tmp/journey-photon.log 2>&1 &
-          echo $! > /tmp/journey-photon.pid
-          for attempt in $(seq 1 20); do
-            if curl --fail --silent --show-error "http://127.0.0.1:8998/api?q=health&limit=1" > /tmp/journey-photon-health.json; then
-              cat /tmp/journey-photon-health.json
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "Journey Photon stub did not become ready."
           exit 1
 
       - name: Start Orientation backend against local MOTIS
@@ -162,7 +152,6 @@ jobs:
           SERVER_PORT=8082 \
           ORIENTATION_DATABASE_PATH=/tmp/orientation-motis.db \
           ORIENTATION_MOTIS_BASE_URL=http://127.0.0.1:8080 \
-          ORIENTATION_PHOTON_BASE_URL=http://127.0.0.1:8998 \
             ./mvnw --batch-mode spring-boot:run > /tmp/orientation-motis.log 2>&1 &
           echo $! > /tmp/orientation-motis.pid
 
@@ -178,6 +167,25 @@ jobs:
           echo "Orientation did not become healthy within two minutes."
           cat /tmp/orientation-motis.log
           exit 1
+
+      - name: Verify local MOTIS geocoding through Orientation
+        run: |
+          set -euo pipefail
+          origin_name="$(python3 -c 'import json; print(json.load(open("/tmp/orientation-motis-smoke/request-metadata.json"))["originStopName"])')"
+          encoded="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$origin_name")"
+          curl --fail --silent --show-error \
+            "http://127.0.0.1:8082/api/v1/places/search?q=${encoded}&limit=5" \
+            > /tmp/orientation-motis-geocode.json
+          python3 - <<'PY'
+          import json
+          response = json.load(open('/tmp/orientation-motis-geocode.json', encoding='utf-8'))
+          if not response:
+              raise SystemExit('Orientation returned no MOTIS-backed place search results')
+          first = response[0]
+          if not str(first.get('providerReference', '')).startswith('motis:'):
+              raise SystemExit(f'Unexpected place provider reference: {first}')
+          print(first)
+          PY
 
       - name: Plan a real public-transit Journey through Orientation
         run: |
@@ -248,10 +256,10 @@ jobs:
           tail -n 240 /tmp/motis-import.log 2>/dev/null || true
           echo '=== MOTIS server ==='
           tail -n 240 /tmp/motis-server.log 2>/dev/null || true
-          echo '=== Journey Photon ==='
-          tail -n 160 /tmp/journey-photon.log 2>/dev/null || true
           echo '=== Orientation ==='
           tail -n 240 /tmp/orientation-motis.log 2>/dev/null || true
+          echo '=== MOTIS-backed geocode ==='
+          cat /tmp/orientation-motis-geocode.json 2>/dev/null || true
           echo '=== Journey response ==='
           cat /tmp/orientation-motis-smoke/response.json 2>/dev/null || true
           echo '=== Standalone app ==='
@@ -265,5 +273,4 @@ jobs:
           if [ -f /tmp/journey-chromedriver.pid ]; then kill "$(cat /tmp/journey-chromedriver.pid)" 2>/dev/null || true; fi
           if [ -f /tmp/journey-app.pid ]; then kill "$(cat /tmp/journey-app.pid)" 2>/dev/null || true; fi
           if [ -f /tmp/orientation-motis.pid ]; then kill "$(cat /tmp/orientation-motis.pid)" 2>/dev/null || true; fi
-          if [ -f /tmp/journey-photon.pid ]; then kill "$(cat /tmp/journey-photon.pid)" 2>/dev/null || true; fi
           if [ -f /tmp/motis.pid ]; then kill "$(cat /tmp/motis.pid)" 2>/dev/null || true; fi
