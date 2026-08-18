@@ -1,190 +1,140 @@
-# Orientation – MOTIS Journey Provider
+# Orientation – MOTIS Provider Runtime
 
-**Status:** v0.5.0 Issue #41 first public-transit provider integration.
+**Status:** v0.5.0 Journey provider accepted; post-v0.5 hardening also uses local MOTIS for Place Search and Reverse Geocoding.
 
-ADR-0008 accepts MOTIS as the first replaceable provider behind Orientation's provider-neutral `JourneyPort`. MOTIS is infrastructure. `JourneyRequest`, `JourneyPlan`, `Journey`, `JourneyLeg`, stops, timing and stable failures remain Orientation-owned semantics.
+MOTIS is infrastructure behind separate Orientation-owned application ports. It does not define Orientation domain semantics.
 
-## Reviewed provider baseline
-
-The first adapter is reviewed against:
+## Reviewed baseline
 
 - MOTIS `v2.11.0`;
-- MOTIS API `v6`;
-- planning endpoint `GET /api/v6/plan`;
-- official Linux amd64 release archive `motis-linux-amd64.tar.bz2`;
+- Journey API `v6`, `GET /api/v6/plan`;
+- geocoding `GET /api/v1/geocode`;
+- reverse geocoding `GET /api/v1/reverse-geocode`;
+- official Linux amd64 archive `motis-linux-amd64.tar.bz2`;
 - archive SHA-256 `508505d3f9cd2e872c763743c459cae4e0539fad14bf490e23251e013d3a6dfa`.
 
-The implementation does not infer compatibility with arbitrary future MOTIS versions merely because the endpoint path remains `/api/v6/plan`.
+Compatibility with future MOTIS versions must be reviewed rather than inferred from unchanged endpoint paths.
 
 ## Runtime configuration
-
-Orientation configures MOTIS under `orientation.motis`:
 
 ```yaml
 orientation:
   motis:
-    base-url: ${ORIENTATION_MOTIS_BASE_URL:http://localhost:8081}
+    base-url: ${ORIENTATION_MOTIS_BASE_URL:http://127.0.0.1:8081}
     connect-timeout: 3s
     read-timeout: 15s
-    user-agent: wgt-system-orientation/0.5.0 (+https://github.com/wgt-system/orientation)
 ```
 
-The default is deliberately local. Orientation does **not** silently route Journey requests through Transitous or another public hosted service.
+The default is deliberately local. Orientation has no automatic Transitous or other hosted fallback.
 
-A provider connection is made only when a Journey request is submitted; the backend can start while MOTIS is unavailable.
+The same configured MOTIS process serves two independent adapter roles:
 
-## Request mapping
+```text
+PlaceSearchPort / ReverseGeocodingPort -> MotisPlaceAdapter
+JourneyPort                           -> MotisJourneyAdapter
+```
 
-The adapter maps the provider-neutral request to `/api/v6/plan` with:
+This runtime consolidation does not collapse Place and Journey domain/application boundaries.
+
+## Place Search / Reverse Geocoding
+
+Forward search maps Orientation `PlaceSearchQuery` to `/api/v1/geocode`:
+
+- `text` from explicit submitted search text;
+- `numResults` from the bounded Orientation limit;
+- optional `language`;
+- optional location bias via MOTIS `place=lat,lon`.
+
+Reverse geocoding maps the explicit Coordinate to `/api/v1/reverse-geocode?place=lat,lon&numResults=1`.
+
+MOTIS `Match` data is translated into Orientation `Place`:
+
+- opaque provider reference is prefixed `motis:`;
+- name becomes display label;
+- `lon`/`lat` become Orientation Coordinate;
+- MOTIS match type is retained only as optional generic place kind;
+- address fields are populated only when supplied; missing city/state/country labels are not invented.
+
+Provider responses are bounded to 1 MiB and malformed/out-of-range results become stable Orientation Place failures.
+
+Photon remains part of v0.2 release history but is no longer part of the current default runtime.
+
+## Journey request mapping
+
+The Journey adapter maps to `/api/v6/plan` with:
 
 - `fromPlace` / `toPlace` as `latitude,longitude`;
-- explicit offset-aware `time`;
-- `arriveBy=true` only for Orientation `ARRIVE_BY`;
-- `preTransitModes=WALK`;
-- `postTransitModes=WALK`;
-- an empty `directModes` set for this public-transit slice;
-- `detailedLegs=true`;
-- `detailedTransfers=true`;
-- `maxItineraries=8`;
-- `realtimeMode=REALTIME`;
-- an explicit accepted transit-mode subset.
+- offset-aware `time`;
+- `arriveBy=true` only for `ARRIVE_BY`;
+- WALK pre/post-transit;
+- no direct modes in this transit slice;
+- detailed legs/transfers;
+- at most eight retained alternatives;
+- realtime-capable mode;
+- an explicit accepted public-transit mode subset.
 
-URI values are expanded as encoded template variables. In particular, a timezone offset such as `+01:00`/`+02:00` must reach MOTIS as data, not be interpreted as a query-space character.
+Timezone offsets are URI-encoded as data. Shared/rental/ODM/ride-sharing modes are not requested or silently normalized.
 
-### Accepted MOTIS transit modes
+## Journey response translation
 
-The initial request asks MOTIS only for:
+MOTIS itineraries are translated before crossing `JourneyPort`:
 
-- `TRAM`
-- `SUBWAY`
-- `FERRY`
-- `BUS`
-- `COACH`
-- `HIGHSPEED_RAIL`
-- `LONG_DISTANCE`
-- `NIGHT_RAIL`
-- `REGIONAL_RAIL`
-- `SUBURBAN`
-- `FUNICULAR`
-- `AERIAL_LIFT`
+- WALK stays WALK;
+- standard transit modes map to Orientation transit modes;
+- rail-family modes map to RAIL/SUBURBAN_RAIL as defined by the accepted adapter;
+- unsupported modes are rejected;
+- scheduled timing is always retained;
+- realtime-adjusted timing is optional and explicit;
+- detailed polyline geometry is accepted only at reviewed precision 6 and decoded before crossing infrastructure;
+- geometry is bounded to 10,000 Coordinates per leg;
+- provider IDs/error bodies do not leak through the stable HTTP contract.
 
-Shared/rental/ODM/ride-sharing modes are not requested by the v0.5 public-transit provider slice.
-
-## Response translation
-
-MOTIS itineraries are translated before they cross `JourneyPort`.
-
-Provider modes normalize to Orientation modes:
-
-- `WALK` -> `WALK`
-- `TRAM` -> `TRAM`
-- `SUBWAY` -> `SUBWAY`
-- `FERRY` -> `FERRY`
-- `BUS` -> `BUS`
-- `COACH` -> `COACH`
-- `SUBURBAN` / `METRO` -> `SUBURBAN_RAIL`
-- rail-family modes -> `RAIL`
-- funicular/aerial-lift modes -> `OTHER_TRANSIT`
-
-Unsupported modes are rejected rather than silently reclassified as public transport.
-
-Transit service presentation prefers MOTIS `displayName`, then `routeShortName`, then an Orientation generic mode label. Provider route/trip identifiers are not exposed by the Journey HTTP response.
-
-Stops are translated to provider-neutral names and Coordinates. Intermediate stops are bounded by the Journey domain limit.
-
-## Scheduled and realtime information
-
-MOTIS `scheduledStartTime` / `scheduledEndTime` always populate Orientation scheduled timing.
-
-When a MOTIS leg is marked realtime, `startTime` / `endTime` populate the optional realtime-adjusted values. When it is not marked realtime, effective timing remains the scheduled timing.
-
-The adapter therefore supports realtime-aware Journey results without claiming complete realtime coverage for a city, operator or dataset.
-
-## Geometry
-
-Detailed MOTIS leg geometry is accepted as encoded polyline only when the provider reports precision `6`, matching the reviewed API-v6 contract.
-
-The adapter decodes geometry before it crosses the infrastructure boundary and enforces the Orientation maximum of 10,000 Coordinates per leg.
-
-Encoded provider polylines never become Journey-domain state.
-
-## Bounds and failure mapping
-
-Provider responses are bounded to 4 MiB. For unknown content length, the adapter reads at most `MAX + 1` bytes before rejecting the response.
-
-Although MOTIS may return slightly more than the requested `maxItineraries`, Orientation retains at most the accepted eight Journey alternatives.
-
-Stable failure mapping:
-
-- HTTP `429` -> `RATE_LIMITED`
-- HTTP `408` / `504` -> `TIMEOUT`
-- provider rejection of an otherwise valid Orientation request -> `INVALID_PROVIDER_RESPONSE`
-- other non-success provider availability errors -> `PROVIDER_UNAVAILABLE`
-- successful response with zero itineraries -> `NO_JOURNEY_FOUND`
-- malformed JSON, invalid modes/times/stops/geometry/domain invariants -> `INVALID_PROVIDER_RESPONSE`
-
-Raw MOTIS errors and DTOs are never returned through the Orientation HTTP contract.
+Journey provider responses are bounded to 4 MiB.
 
 ## Deterministic self-hosted acceptance
 
-The repository contains `MOTIS Journey Smoke` as a deterministic real-provider gate.
+`MOTIS Journey Smoke` pins:
 
-It pins:
-
-- MOTIS `v2.11.0` Linux archive by the SHA-256 above;
+- MOTIS v2.11.0 archive and checksum;
 - `motis-project/test-data` commit `e2a596045675e12760d77db991b57f1979a998e6`;
 - Aachen OSM blob `d4f8a764450637f25a687ba2444914a13b087cab`;
 - AVV GTFS blob `8dd7acedd31f961217bf69e4e8bf7d5dae4c8c97`.
 
-The smoke verifies downloaded fixture bytes with Git blob identity, derives an active Aachen-city trip deterministically from the pinned GTFS and configures MOTIS' timetable window to that fixture service date rather than the CI runner's current date.
-
-It then proves the real chain:
+The gate now proves both provider roles using the same self-hosted runtime:
 
 ```text
 pinned OSM + GTFS
       -> MOTIS config/import/server
-      -> Orientation backend
-      -> POST /api/v1/journeys
-      -> provider-neutral Journey alternatives
+      -> Orientation Place Search
+      -> Orientation Journey planning
+      -> production standalone browser
 ```
 
-Acceptance requires at least one actual transit leg, retained scheduled timing and decoded provider-neutral geometry. It also rejects leakage of MOTIS/Transitous/provider IDs and sharing semantics through the Orientation result.
+The browser acceptance searches the real pinned MOTIS dataset for its origin, plans a real transit Journey and renders/selects/clears it while preserving Discovery state.
 
-This gate is self-hosted and does not call Transitous.
+No public Transitous or Photon request is required for deterministic acceptance.
 
-## Transitous boundary
+## Privacy boundary
 
-Transitous may be configured deliberately for bounded manual/reference verification because it operates a public MOTIS service and aggregates useful open transit datasets.
+By default, search text, origin, destination and Journey time stay between Orientation and the loopback MOTIS process. A deployment that deliberately points `ORIENTATION_MOTIS_BASE_URL` at a non-loopback endpoint changes that privacy boundary and requires explicit operator review.
 
-It is **not**:
+Orientation must not silently choose a hosted endpoint when local MOTIS is missing.
 
-- the Orientation default;
-- a deterministic CI/release dependency;
-- an implied privacy-equivalent substitute for a local MOTIS process.
+## Non-goals
 
-Hosted Journey requests leave the local process. Usage policy, identifying User-Agent/contact expectations, attribution and the provider's privacy/logging policy must therefore be respected whenever Transitous is selected explicitly.
+This runtime does not add:
 
-## Non-goals of Issue #41
-
-This provider slice does not add:
-
-- GBFS/shared mobility planning;
-- rental/ODM/ride-sharing modes;
-- fares or ticketing;
-- booking/operator actions;
-- multimodal sharing + transit;
-- a complete realtime-coverage claim;
-- Vocation integration;
-- Journey map rendering or standalone Journey UI.
-
-Those remain separate product slices.
+- GBFS/shared mobility;
+- fares/ticketing or booking;
+- complete realtime-coverage claims;
+- arbitrary multimodal sharing optimization;
+- mobile dataset packaging;
+- automatic provider selection/failover.
 
 ## Primary provider references
 
 - MOTIS repository: https://github.com/motis-project/motis
 - MOTIS v2.11.0: https://github.com/motis-project/motis/releases/tag/v2.11.0
-- MOTIS setup/configuration: https://github.com/motis-project/motis/blob/v2.11.0/docs/setup.md
+- MOTIS setup: https://github.com/motis-project/motis/blob/v2.11.0/docs/setup.md
 - MOTIS OpenAPI: https://github.com/motis-project/motis/blob/v2.11.0/openapi.yaml
 - MOTIS test data: https://github.com/motis-project/test-data
-- Transitous API policy: https://transitous.org/api/
-- Transitous privacy policy: https://transitous.org/privacy/
