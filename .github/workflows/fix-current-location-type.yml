@@ -1,0 +1,36 @@
+name: Fix Current Location Navigation Endpoint Type
+
+on:
+  push:
+    branches: [issue/59-current-location-origin]
+    paths: [.github/workflows/fix-current-location-type.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: issue/59-current-location-origin
+      - shell: python
+        run: |
+          from pathlib import Path
+          path = Path('map/src/app/app.ts')
+          text = path.read_text(encoding='utf-8')
+          old = 'function setNavigationDestination(destination: NavigationDestination, status: string): void {'
+          new = 'function setNavigationDestination(destination: NavigationEndpoint, status: string): void {'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected one stale NavigationDestination signature, found {text.count(old)}')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/fix-current-location-type.yml
+          git add map/src/app/app.ts
+          git commit -m "Fix current-location navigation endpoint type"
+          git push origin HEAD:issue/59-current-location-origin
