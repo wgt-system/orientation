@@ -685,7 +685,7 @@ function renderDestinationResults(places: readonly Place[]): void {
   }
 }
 
-function setNavigationDestination(destination: NavigationDestination, status: string): void {
+function setNavigationDestination(destination: NavigationEndpoint, status: string): void {
   routeDestination = destination;
   routeDestinationResults.replaceChildren();
   setStatus(routeDestinationStatus, status, "success");
