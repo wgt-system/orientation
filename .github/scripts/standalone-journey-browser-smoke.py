@@ -171,17 +171,40 @@ def search_and_select(session: str, query_selector: str, button_selector: str, r
     wait_for(session, f"place selection for {query}", f"return document.querySelector({json.dumps(status_selector)})?.textContent?.startsWith('Selected');")
 
 
-def select_origin_and_destination(session: str, metadata: dict) -> None:
-    origin_name = metadata.get("originStopName") or "Aachen"
-    destination_name = metadata.get("destinationStopName") or "Aachen"
-    search_and_select(
+def select_origin_and_destination(session: str, request: dict, metadata: dict) -> None:
+    origin = request["origin"]
+    execute(
         session,
-        "#route-origin-query",
-        "#route-origin-search",
-        "#route-origin-results",
-        "#route-origin-status",
-        origin_name,
+        f"""
+        Object.defineProperty(navigator, 'geolocation', {{
+          configurable: true,
+          value: {{
+            getCurrentPosition(success) {{
+              success({{
+                coords: {{
+                  longitude: {origin['longitude']},
+                  latitude: {origin['latitude']},
+                  accuracy: 12.4
+                }},
+                timestamp: Date.now()
+              }});
+            }}
+          }}
+        }});
+        return true;
+        """,
     )
+    click(session, "#route-use-current-location")
+    wait_for(
+        session,
+        "current-location origin selection",
+        "return document.querySelector('#route-origin-status')?.textContent?.startsWith('Selected: Current location');",
+    )
+    origin_status = text(session, "#route-origin-status")
+    if "±12 m" not in origin_status:
+        raise AssertionError(f"Current-location accuracy was not shown: {origin_status}")
+
+    destination_name = metadata.get("destinationStopName") or "Aachen"
     search_and_select(
         session,
         "#route-destination-query",
@@ -194,7 +217,7 @@ def select_origin_and_destination(session: str, metadata: dict) -> None:
     if not selected.startswith("Destination:"):
         raise AssertionError(f"Destination summary is not visible after direct search: {selected}")
     if execute(session, "return document.querySelectorAll('#candidate-list .candidate-button').length;") != 0:
-        raise AssertionError("Ad-hoc Journey acceptance unexpectedly depends on a Discovery Candidate")
+        raise AssertionError("Quick Journey acceptance unexpectedly depends on a Discovery Candidate")
 
 
 def request_and_show_journey(session: str, request: dict) -> int:
@@ -235,7 +258,7 @@ def run_browser(request_path: str, metadata_path: str, _example_path: str) -> No
     print("Chrome session", session, "standalone ad-hoc Journey acceptance")
     try:
         open_app(session)
-        select_origin_and_destination(session, metadata)
+        select_origin_and_destination(session, request, metadata)
         alternatives = request_and_show_journey(session, request)
 
         if alternatives > 1:
@@ -256,7 +279,7 @@ def run_browser(request_path: str, metadata_path: str, _example_path: str) -> No
         if not text(session, "#route-origin-status").startswith("Selected:") or not text(session, "#route-destination-status").startswith("Selected:"):
             raise AssertionError("Clearing navigation unexpectedly cleared selected endpoints")
 
-        print(f"PASS: standalone app planned and rendered {alternatives} real place-to-place public-transit Journey alternative(s) without research import")
+        print(f"PASS: standalone app planned and rendered {alternatives} real current-location-to-place public-transit Journey alternative(s) without research import")
     finally:
         try:
             webdriver("DELETE", f"/session/{session}")
