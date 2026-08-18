@@ -1,6 +1,6 @@
-# Orientation – Product Direction after v0.4.0
+# Orientation – Product Direction after v0.5.0
 
-**Status:** v0.4.0 is released and accepted. The v0.5.0 public-transit implementation (#40–#43) is integrated on `dev`; #44 is the final hardening/release gate. v0.5.0 is not a published release until explicit promotion completes.
+**Status:** v0.5.0 is released and accepted on 2026-08-18.
 
 ## Why this document exists
 
@@ -28,11 +28,11 @@ question -> research prompt -> external structured result -> validation/import
 
 Completed packages #20–#24 established the Orientation-owned Spatial Research Bundle 1.0, deterministic external-research prompt generation, strict import, local SQLite discovery persistence, the first standalone discovery application and the integrated v0.4 hardening/release gate.
 
-## v0.5.0 public-transit release candidate
+## v0.5.0 public-transit baseline
 
 **Focus:** make time-dependent public-transit Journey planning a first-class standalone Orientation Navigate flow without weakening the released direct Route boundary.
 
-The integrated candidate is:
+The released baseline is:
 
 ```text
 selected destination + explicit origin + depart/arrive time
@@ -52,7 +52,7 @@ select Journey
 Journey Map Surface overlay
 ```
 
-### Implemented work packages
+### Completed work packages
 
 1. **#40 — Public-transit Journey boundary**
    - separate `Journey` abstraction; `TRANSIT` is not added to direct `TravelProfile`;
@@ -84,12 +84,12 @@ Journey Map Surface overlay
    - real production-browser acceptance against self-hosted MOTIS.
 
 5. **#44 — Integrated hardening/release**
-   - final regression/security/repository consistency and release-readiness evidence;
-   - no `main` promotion, tag, GitHub Release or milestone closure without explicit release approval.
+   - final regression/security/repository consistency and release evidence completed;
+   - explicit Control Plane approval authorized `main` promotion, tag/GitHub Release and milestone closure.
 
 ### v0.5.0 boundaries
 
-The candidate does not claim:
+v0.5.0 does not claim:
 
 - shared mobility/GBFS vehicle or station availability;
 - bike/scooter/car-sharing booking;
@@ -121,4 +121,4 @@ Their domain semantics remain different. Shared mechanical helpers may later bec
 
 ## What may come after v0.5.0
 
-Do not create another version ladder before v0.5.0 is released and reviewed. Shared mobility, richer realtime/disruption semantics, multimodal planning and consumer migrations remain candidate capability families only; each requires a concrete product slice and explicit ownership/provider review before milestone creation.
+Do not create another version ladder merely because v0.5.0 is released. Shared mobility, richer realtime/disruption semantics, multimodal planning and consumer migrations remain candidate capability families only; each requires a concrete product slice and explicit ownership/provider review before milestone creation.

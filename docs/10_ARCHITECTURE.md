@@ -1,6 +1,6 @@
 # Orientation – Architecture
 
-**Status:** v0.4.0 is released. The v0.5.0 public-transit Journey implementation is integrated on `dev` and undergoing final #44 hardening.
+**Status:** v0.5.0 is released and accepted on 2026-08-18.
 
 ## Logical architecture
 

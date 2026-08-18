@@ -14,7 +14,7 @@ Current Location supports the same space: Orientation can consume and visualize 
 
 Orientation is independently useful; it is not only a map/geocoder/router for other bounded contexts.
 
-The current `dev` release candidate provides this first-class standalone loop:
+The released v0.5.0 baseline provides this first-class standalone loop:
 
 ```text
 spatial question / criteria
@@ -40,7 +40,7 @@ DRIVING / CYCLING / WALKING direct Route
 public-transit Journey alternatives with depart-at / arrive-by
 ```
 
-Public-transit planning is a separate time-dependent `Journey` model rather than another value in the direct-routing `TravelProfile`. The first adapter is MOTIS v2.11.0; deterministic acceptance uses a pinned self-hosted MOTIS runtime and pinned OSM/GTFS fixture. Public Transit is therefore part of the **v0.5.0 release candidate on `dev`**, not yet a published release until the final #44 release gate and explicit release promotion complete.
+Public-transit planning is a separate time-dependent `Journey` model rather than another value in the direct-routing `TravelProfile`. The first adapter is MOTIS v2.11.0; deterministic acceptance uses a pinned self-hosted MOTIS runtime and pinned OSM/GTFS fixture. Public Transit is part of the **released v0.5.0 baseline**.
 
 Research results are evidence-backed input, not automatically authoritative truth. Heuristic matches must not silently become asserted sensitive personal characteristics.
 
@@ -105,10 +105,11 @@ Valhalla is the upstream engine for direct DRIVING/CYCLING/WALKING routes. MOTIS
 - **v0.2.0** — Orientation-owned Place model, forward place search and reverse geocoding through a replaceable Photon adapter and narrow HTTP endpoints.
 - **v0.3.0** — provider-neutral two-point routing, Valhalla 3.8.3 integration, DRIVING/CYCLING/WALKING, route rendering and Reference Host route planning.
 - **v0.4.0** — spatial-research contract 1.0, deterministic external-research prompts, strict import, local SQLite discovery persistence, restart/reopen support and the first standalone discovery-to-route application workflow.
+- **v0.5.0** — provider-neutral public-transit Journey planning, MOTIS v2.11.0 integration, Journey rendering and standalone Journey comparison/selection while preserving the v0.4 discovery and direct-routing baseline.
 
-## v0.5.0 release candidate
+## v0.5.0
 
-The integrated `dev` candidate adds:
+The released v0.5.0 baseline adds:
 
 - a provider-neutral, offset-aware public-transit `Journey` boundary with `DEPART_AT` / `ARRIVE_BY`;
 - ordered WALK/transit legs, scheduled timing plus optional realtime-adjusted timing, transfers and bounded decoded geometry;
@@ -117,6 +118,6 @@ The integrated `dev` candidate adds:
 - public-transit alternatives in the standalone app with explicit selection, replacement and clear behavior;
 - deterministic self-hosted MOTIS acceptance and real production-browser Journey acceptance while preserving the v0.4 discovery and direct-routing regression path.
 
-The candidate does **not** claim shared mobility/GBFS, fares or ticketing, booking, complete realtime coverage, multimodal optimization across independent sharing providers, turn-by-turn live navigation, automatic background crawling, paid LLM/API execution, Vocation migration completion, cross-device synchronization or physical-iPhone support.
+v0.5.0 does **not** claim shared mobility/GBFS, fares or ticketing, booking, complete realtime coverage, multimodal optimization across independent sharing providers, turn-by-turn live navigation, automatic background crawling, paid LLM/API execution, Vocation migration completion, cross-device synchronization or physical-iPhone support.
 
 See [`docs/16_PRODUCT_DIRECTION.md`](docs/16_PRODUCT_DIRECTION.md) for the product direction and [`docs/INDEX.md`](docs/INDEX.md) for the complete specification set.

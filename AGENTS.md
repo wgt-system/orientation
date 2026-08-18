@@ -6,7 +6,7 @@ This repository owns the **Orientation** bounded context in the `wgt-system` org
 
 Orientation is an independently useful local-first personal spatial exploration and mobility context. It also provides reusable generic geospatial capabilities to other accepted bounded contexts and WGT hosts.
 
-Its current capability space includes Discover, Explore, Navigate and Current Location. The released v0.4 baseline includes Orientation-owned spatial research prompts/imports, persistent personal discovery collections and a first-class standalone discovery-to-direct-route workflow. The v0.5 release candidate adds a separate time-dependent public-transit Journey model, MOTIS-backed planning, reusable Journey rendering and standalone Journey comparison/selection.
+Its current capability space includes Discover, Explore, Navigate and Current Location. The released v0.4 baseline includes Orientation-owned spatial research prompts/imports, persistent personal discovery collections and a first-class standalone discovery-to-direct-route workflow. The released v0.5 baseline adds a separate time-dependent public-transit Journey model, MOTIS-backed planning, reusable Journey rendering and standalone Journey comparison/selection.
 
 ## WGT System Architecture
 
@@ -136,7 +136,7 @@ Exact dependency versions are repository implementation facts and may be updated
 
 Orientation currently has three intentionally separate browser surfaces:
 
-- **Standalone App** — first-class Orientation end-user research/import/discovery/map/navigation workflow, including direct Route and the v0.5 public-transit Journey candidate;
+- **Standalone App** — first-class Orientation end-user research/import/discovery/map/navigation workflow, including direct Route and the released v0.5 public-transit Journey flow;
 - **Reference Host** — development/acceptance surface for reusable geospatial/direct-routing capabilities;
 - **Embed Host** — reusable host boundary using `orientation.host-bridge` 1.0.
 

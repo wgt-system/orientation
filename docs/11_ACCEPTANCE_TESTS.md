@@ -1,6 +1,6 @@
 # Orientation – Acceptance Tests
 
-**Status:** v0.1.0 through v0.4.0 are released and accepted. v0.5.0 public-transit Journey work #40–#43 is integrated on `dev`; #44 is the final release-candidate hardening gate.
+**Status:** Orientation v0.1.0 through v0.5.0 are released and accepted. v0.5.0 public-transit Journey work #40–#44 completed the first public-transit release baseline.
 
 ## Architecture invariants
 
@@ -31,7 +31,7 @@
 
 ### v0.1.0 — Map-surface foundation
 
-Accepted provider-neutral Spatial Scene/Map Surface, rich feature interaction, host-supplied Current Location, `orientation.host-bridge` 1.0, Reference Host and Embed Host. Evidence covers deterministic scene lifecycle, generic viewport behavior, accessibility, current-position presentation and real browser behavior.
+Accepted provider-neutral Spatial Scene/Map Surface, rich spatial feature interaction, host-supplied Current Location, `orientation.host-bridge` 1.0, Reference Host and Embed Host. Evidence covers deterministic scene lifecycle, generic viewport behavior, accessibility, current-position presentation and real browser behavior.
 
 ### v0.1.1 — Basemap patch
 
@@ -65,7 +65,9 @@ Acceptance covers:
 
 The v0.4 browser regression remains a release gate for later versions: import → restart → reopen → DRIVING route → clear must keep discovery state intact.
 
-## v0.5.0 — Public-transit Journey release candidate
+## v0.5.0 — Public-transit Journey
+
+Released and accepted on 2026-08-18.
 
 ### #40 — Provider-neutral Journey boundary
 
@@ -120,7 +122,7 @@ The focused production-browser acceptance uses the same pinned self-hosted MOTIS
 
 ### #44 — Integrated hardening/release gate
 
-Release-candidate acceptance requires all of the following on the final #44 PR head:
+Release acceptance required all of the following on the final release candidate:
 
 - backend CI PASS;
 - map tests/typecheck/production build PASS;
@@ -134,7 +136,7 @@ Release-candidate acceptance requires all of the following on the final #44 PR h
 - unchanged `orientation.host-bridge` 1.0;
 - no unsupported claim of shared mobility/GBFS, fares/ticketing, booking, complete realtime coverage, arbitrary multimodal sharing optimization, live turn-by-turn navigation, Vocation migration completion, cross-device synchronization or physical-iPhone support.
 
-Passing #44 makes `dev` release-ready only. Promotion to `main`, tag/release creation, #44 closure and milestone closure require explicit release approval.
+The gates passed and explicit Control Plane approval authorized promotion to `main`, tag/release creation, #44 closure and milestone closure.
 
 ## Cross-repository integration state
 

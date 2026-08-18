@@ -1,6 +1,6 @@
 # Orientation – Implementation Plan
 
-**Status:** v0.1.0 through v0.4.0 are released. The v0.5.0 implementation packages #40–#43 are complete on `dev`; #44 is the active hardening/release gate. v0.5.0 is not released until explicit promotion to `main`, tag and GitHub Release complete.
+**Status:** v0.1.0 through v0.5.0 are released. v0.5.0 completed packages #40–#44 and was released on 2026-08-18 after explicit Control Plane approval and final promotion.
 
 Milestone names, when created, use semantic versions only. Do not pre-create speculative future milestone ladders.
 
@@ -59,6 +59,8 @@ Completed packages #20–#24:
 
 ## v0.5.0 — Public-transit Journey
 
+Released and accepted on 2026-08-18.
+
 **Focus:** add first-class time-dependent public-transit planning while preserving the released direct `Route` boundary.
 
 ### #40 — Define provider-neutral Journey boundary — complete
@@ -112,9 +114,9 @@ Delivered:
 - Journey replacement/clear without corrupting discovery state;
 - focused production-browser acceptance against self-hosted MOTIS.
 
-### #44 — Harden and release v0.5.0 — active
+### #44 — Harden and release v0.5.0 — complete
 
-Release-candidate hardening must prove on the final PR head:
+Release hardening proved on the final release candidate:
 
 - backend CI PASS;
 - map tests/typecheck/production build PASS;
@@ -127,7 +129,7 @@ Release-candidate hardening must prove on the final PR head:
 - unchanged `orientation.host-bridge` 1.0 consumer contract;
 - no unsupported claims for shared mobility, fares/ticketing, full realtime coverage, live navigation, Vocation migration or physical-iPhone support.
 
-After #44 passes, the release remains blocked on explicit Control Plane approval. Hardening alone must not merge to `main`, create tag `v0.5.0`, publish a GitHub Release or close the milestone.
+Explicit Control Plane approval on 2026-08-18 authorized the final `dev` → `main` promotion, `v0.5.0` tag/GitHub Release and closure of #44 plus the v0.5.0 milestone.
 
 ## Dependency order
 
@@ -147,4 +149,4 @@ After #44 passes, the release remains blocked on explicit Control Plane approval
 
 ## Sequencing rule
 
-Stabilize the smallest consumed boundary first. Do not create future contracts or milestones merely because a provider exposes additional features. Shared mobility, richer disruption/realtime semantics, multimodal planning and consumer migrations require separately justified product slices after v0.5.0 is released and reviewed.
+Stabilize the smallest consumed boundary first. Do not create future contracts or milestones merely because a provider exposes additional features. Shared mobility, richer disruption/realtime semantics, multimodal planning and consumer migrations require separately justified product slices after the v0.5.0 release is reviewed.
