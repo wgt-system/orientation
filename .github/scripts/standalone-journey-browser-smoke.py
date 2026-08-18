@@ -110,10 +110,7 @@ def make_bundle(request: dict, metadata: dict, example_path: str) -> dict:
     bundle["researchedAt"] = "2026-08-17T20:00:00Z"
     bundle["question"]["questionRef"] = "aachen-journey-smoke"
     bundle["question"]["text"] = "Deterministic Aachen public-transit Journey acceptance destination."
-    bundle["question"]["area"]["center"] = {
-        "label": origin_name,
-        "coordinate": origin,
-    }
+    bundle["question"]["area"]["center"] = {"label": origin_name, "coordinate": origin}
     bundle["question"]["area"]["radiusMeters"] = 25000
     candidate = bundle["candidates"][0]
     candidate["candidateRef"] = "journey-destination"
@@ -128,8 +125,55 @@ def make_bundle(request: dict, metadata: dict, example_path: str) -> dict:
 
 
 def local_datetime_value(offset_timestamp: str) -> str:
-    parsed = datetime.fromisoformat(offset_timestamp)
-    return parsed.strftime("%Y-%m-%dT%H:%M")
+    return datetime.fromisoformat(offset_timestamp).strftime("%Y-%m-%dT%H:%M")
+
+
+def verify_workspace_layout(session: str) -> None:
+    desktop = execute(
+        session,
+        """
+        const research=document.querySelector('#research-panel');
+        const navigate=document.querySelector('#navigate-card');
+        const map=document.querySelector('#app-map');
+        const nav=document.querySelector('.app-jump-nav');
+        if(!research || !navigate || !map || !nav) return null;
+        return {
+          researchOverflow:getComputedStyle(research).overflowY,
+          researchScrollable:research.scrollHeight > research.clientHeight,
+          navigateBeforeMap:navigate.getBoundingClientRect().top < map.getBoundingClientRect().top,
+          jumpLinks:nav.querySelectorAll('a').length
+        };
+        """,
+    )
+    if not desktop or desktop["researchOverflow"] != "auto" or not desktop["researchScrollable"]:
+        raise AssertionError(f"Desktop Research column is not independently scrollable: {desktop}")
+    if not desktop["navigateBeforeMap"] or desktop["jumpLinks"] != 3:
+        raise AssertionError(f"Desktop Navigate discoverability regression: {desktop}")
+
+    webdriver("POST", f"/session/{session}/window/rect", {"width": 390, "height": 844})
+    mobile = wait_for(
+        session,
+        "mobile document-scroll layout",
+        """
+        const research=document.querySelector('#research-panel');
+        if(!research) return null;
+        const bodyOverflow=getComputedStyle(document.body).overflowY;
+        const researchOverflow=getComputedStyle(research).overflowY;
+        return (document.documentElement.scrollHeight > window.innerHeight && researchOverflow !== 'auto')
+          ? {bodyOverflow, researchOverflow, scrollHeight:document.documentElement.scrollHeight}
+          : null;
+        """,
+        timeout=10,
+    )
+    click(session, '.app-jump-nav a[href="#navigate-card"]')
+    wait_for(
+        session,
+        "mobile Navigate jump",
+        "return location.hash === '#navigate-card' && document.querySelector('#navigate-card').getBoundingClientRect().top < window.innerHeight;",
+        timeout=5,
+    )
+    print("PASS: standalone layout desktop scroll + mobile document navigation", desktop, mobile)
+    webdriver("POST", f"/session/{session}/window/rect", {"width": 1440, "height": 1000})
 
 
 def open_app(session: str) -> None:
@@ -139,6 +183,7 @@ def open_app(session: str) -> None:
     wait_for(session, "MapLibre canvas", "return Boolean(document.querySelector('#app-map .maplibregl-canvas'));", timeout=30)
     if execute(session, "return !document.querySelector('#app-map-status').hidden;"):
         raise AssertionError(f"Map reported error: {text(session, '#app-map-status')}")
+    verify_workspace_layout(session)
 
 
 def select_origin_and_destination(session: str, bundle: dict, metadata: dict) -> None:
