@@ -66,6 +66,10 @@ const routeOriginQuery = required<HTMLInputElement>("#route-origin-query");
 const routeOriginSearch = required<HTMLButtonElement>("#route-origin-search");
 const routeOriginStatus = required<HTMLElement>("#route-origin-status");
 const routeOriginResults = required<HTMLOListElement>("#route-origin-results");
+const routeDestinationQuery = required<HTMLInputElement>("#route-destination-query");
+const routeDestinationSearch = required<HTMLButtonElement>("#route-destination-search");
+const routeDestinationStatus = required<HTMLElement>("#route-destination-status");
+const routeDestinationResults = required<HTMLOListElement>("#route-destination-results");
 const routeProfile = required<HTMLSelectElement>("#route-profile");
 const journeyTimeControls = required<HTMLElement>("#journey-time-controls");
 const journeyTimeMode = required<HTMLSelectElement>("#journey-time-mode");
@@ -84,11 +88,14 @@ const candidateSources = required<HTMLElement>("#candidate-sources");
 let collectionSummaries: readonly DiscoverySummary[] = [];
 let currentCollection: DiscoveryDetail | undefined;
 let selectedCandidate: DiscoveryCandidate | undefined;
+type NavigationDestination = Readonly<{ displayLabel: string; coordinate: Place["coordinate"] }>;
 let routeOrigin: Place | undefined;
+let routeDestination: NavigationDestination | undefined;
 let promptAbort: AbortController | undefined;
 let importAbort: AbortController | undefined;
 let collectionAbort: AbortController | undefined;
 let originAbort: AbortController | undefined;
+let destinationAbort: AbortController | undefined;
 let routeAbort: AbortController | undefined;
 let journeyAbort: AbortController | undefined;
 let routePending = false;
@@ -101,6 +108,7 @@ let promptRequest = 0;
 let importRequest = 0;
 let collectionRequest = 0;
 let originRequest = 0;
+let destinationRequest = 0;
 let routeRequestSequence = 0;
 let journeyRequestSequence = 0;
 
@@ -135,6 +143,13 @@ routeOriginQuery.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     void searchRouteOrigin();
+  }
+});
+routeDestinationSearch.addEventListener("click", () => void searchRouteDestination());
+routeDestinationQuery.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    void searchRouteDestination();
   }
 });
 routeProfile.addEventListener("change", () => {
@@ -322,7 +337,7 @@ async function refreshCollections(openCollectionId?: string): Promise<void> {
       currentCollection = undefined;
       selectedCandidate = undefined;
       surface.setScene({ features: [] });
-      clearNavigation("No navigation requested.");
+      renderNavigationDestination();
       return;
     }
     setStatus(collectionsStatus, `${collectionSummaries.length} saved collection${collectionSummaries.length === 1 ? "" : "s"}.`, "success");
@@ -369,7 +384,6 @@ async function openCollection(collectionId: string): Promise<void> {
     selectedCandidate = undefined;
     candidateFilter.value = "";
     candidateSort.value = "research";
-    clearNavigation("No navigation requested.");
     renderCollectionList();
     renderCollection(detail);
     setStatus(collectionsStatus, "Collection open.", "success");
@@ -385,7 +399,7 @@ function renderCollection(detail: DiscoveryDetail): void {
   collectionQuestion.textContent = detail.question.text;
   collectionArea.textContent = `${detail.question.centerLabel} · ${formatRadius(detail.question.radiusMeters)}`;
   candidateDetail.hidden = true;
-  selectedDestination.textContent = "Select a mapped candidate.";
+  renderNavigationDestination();
   renderCandidates();
   renderCollectionScene();
 }
@@ -444,10 +458,21 @@ function selectFromMap(event: SpatialFeatureSelectedEvent): void {
 
 function selectCandidate(candidate: DiscoveryCandidate, focusMap: boolean): void {
   selectedCandidate = candidate;
-  invalidateNavigation("Destination changed. Request navigation again.");
-  selectedDestination.textContent = candidate.researchedLocation.coordinate
-    ? `${candidate.displayName} · ${candidate.researchedLocation.label}`
-    : `${candidate.displayName} has no researched coordinate and cannot be routed yet.`;
+  const coordinate = candidate.researchedLocation.coordinate;
+  if (coordinate) {
+    setNavigationDestination(
+      { displayLabel: `${candidate.displayName} · ${candidate.researchedLocation.label}`, coordinate },
+      `Selected research candidate: ${candidate.displayName}`,
+    );
+    routeDestinationQuery.value = candidate.displayName;
+  } else {
+    routeDestination = undefined;
+    routeDestinationQuery.value = "";
+    routeDestinationResults.replaceChildren();
+    setStatus(routeDestinationStatus, "Selected research candidate has no coordinate.", "error");
+    renderNavigationDestination();
+    invalidateNavigation("Destination changed. Request navigation again.");
+  }
   renderCandidates();
   renderCandidateDetail(candidate);
   if (focusMap && currentCollection) {
@@ -556,6 +581,69 @@ function renderOriginResults(places: readonly Place[]): void {
   }
 }
 
+async function searchRouteDestination(): Promise<void> {
+  const query = routeDestinationQuery.value.trim();
+  if (!query) return;
+  destinationAbort?.abort();
+  const controller = new AbortController();
+  destinationAbort = controller;
+  const sequence = ++destinationRequest;
+  routeDestinationResults.replaceChildren();
+  setStatus(routeDestinationStatus, "Searching…");
+  try {
+    const places = await searchPlaces(query, { signal: controller.signal });
+    if (sequence !== destinationRequest) return;
+    if (!places.length) {
+      setStatus(routeDestinationStatus, "No places found.");
+      return;
+    }
+    setStatus(routeDestinationStatus, `${places.length} result${places.length === 1 ? "" : "s"}. Select one.`);
+    renderDestinationResults(places);
+  } catch (error) {
+    if (controller.signal.aborted || sequence !== destinationRequest) return;
+    setStatus(routeDestinationStatus, error instanceof PlaceApiError ? error.message : "Destination search is temporarily unavailable.", "error");
+  }
+}
+
+function renderDestinationResults(places: readonly Place[]): void {
+  routeDestinationResults.replaceChildren();
+  for (const place of places) {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "place-result";
+    const title = document.createElement("strong");
+    title.textContent = place.displayLabel;
+    const meta = document.createElement("span");
+    meta.textContent = [place.address.postcode, place.address.city, place.address.country].filter(Boolean).join(" · ");
+    button.append(title, meta);
+    button.addEventListener("click", () => {
+      selectedCandidate = undefined;
+      candidateDetail.hidden = true;
+      if (currentCollection) renderCandidates();
+      setNavigationDestination(place, `Selected: ${place.displayLabel}`);
+      routeDestinationQuery.value = place.displayLabel;
+    });
+    item.append(button);
+    routeDestinationResults.append(item);
+  }
+}
+
+function setNavigationDestination(destination: NavigationDestination, status: string): void {
+  routeDestination = destination;
+  routeDestinationResults.replaceChildren();
+  setStatus(routeDestinationStatus, status, "success");
+  renderNavigationDestination();
+  invalidateNavigation("Destination changed. Request navigation again.");
+  updateRouteControls();
+}
+
+function renderNavigationDestination(): void {
+  selectedDestination.textContent = routeDestination
+    ? `Destination: ${routeDestination.displayLabel}`
+    : "Search a destination or select a mapped research candidate.";
+}
+
 async function requestSelectedNavigation(): Promise<void> {
   if (routeProfile.value === "TRANSIT") {
     await requestSelectedJourney();
@@ -566,7 +654,7 @@ async function requestSelectedNavigation(): Promise<void> {
 
 async function requestSelectedRoute(): Promise<void> {
   const origin = routeOrigin;
-  const destination = selectedCandidate?.researchedLocation.coordinate;
+  const destination = routeDestination?.coordinate;
   if (!origin || !destination || routePending || journeyPending || !isDirectProfile(routeProfile.value)) return;
 
   cancelJourneyRequest();
@@ -587,7 +675,7 @@ async function requestSelectedRoute(): Promise<void> {
     if (sequence !== routeRequestSequence) return;
     surface.setRoute(route);
     routeRendered = true;
-    renderRouteSummary(origin.displayLabel, selectedCandidate?.displayName ?? "Destination", route.distanceMeters, route.durationSeconds, route.profile);
+    renderRouteSummary(origin.displayLabel, routeDestination?.displayLabel ?? "Destination", route.distanceMeters, route.durationSeconds, route.profile);
     setStatus(routeStatus, "Route ready.", "success");
   } catch (error) {
     if (controller.signal.aborted || sequence !== routeRequestSequence) return;
@@ -606,7 +694,7 @@ async function requestSelectedRoute(): Promise<void> {
 
 async function requestSelectedJourney(): Promise<void> {
   const origin = routeOrigin;
-  const destination = selectedCandidate?.researchedLocation.coordinate;
+  const destination = routeDestination?.coordinate;
   if (!origin || !destination || routePending || journeyPending) return;
 
   let time: string;
@@ -795,7 +883,7 @@ function updateNavigationMode(): void {
 }
 
 function updateRouteControls(): void {
-  const destinationAvailable = Boolean(selectedCandidate?.researchedLocation.coordinate);
+  const destinationAvailable = Boolean(routeDestination);
   const pending = routePending || journeyPending;
   const timeAvailable = routeProfile.value !== "TRANSIT" || Boolean(journeyTime.value);
   requestRouteButton.disabled = !routeOrigin || !destinationAvailable || !timeAvailable || pending;
@@ -899,6 +987,7 @@ window.addEventListener(
     importAbort?.abort();
     collectionAbort?.abort();
     originAbort?.abort();
+    destinationAbort?.abort();
     routeAbort?.abort();
     journeyAbort?.abort();
     surface.destroy();
