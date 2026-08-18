@@ -158,7 +158,7 @@ def reopen_phase(session: str) -> None:
     wait_for(session, "candidate evidence detail", "return document.querySelector('#candidate-detail-title')?.textContent === 'Example Garden Restaurant';")
     if not execute(session, "return document.querySelector('#candidate-detail a[href=" + json.dumps("https://example.org/restaurant") + "]') !== null;"):
         raise AssertionError("Candidate provenance link was not rendered")
-    if not text(session, "#selected-destination").startswith("Example Garden Restaurant"):
+    if not text(session, "#selected-destination").startswith("Destination: Example Garden Restaurant"):
         raise AssertionError("Selected candidate did not become route destination")
 
     set_value(session, "#route-origin-query", "Smoke Start")

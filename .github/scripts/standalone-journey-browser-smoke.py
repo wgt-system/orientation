@@ -5,14 +5,14 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
-from pathlib import Path
 
 WEBDRIVER = "http://127.0.0.1:9515"
 APP_URL = "http://127.0.0.1:4174/app.html"
 
 
 def load_json(path: str) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 def webdriver(method: str, path: str, payload: dict | None = None):
@@ -101,29 +101,6 @@ def new_session() -> str:
     return created["sessionId"]
 
 
-def make_bundle(request: dict, metadata: dict, example_path: str) -> dict:
-    bundle = load_json(example_path)
-    origin = request["origin"]
-    destination = request["destination"]
-    origin_name = metadata.get("originStopName") or "Aachen origin"
-    destination_name = metadata.get("destinationStopName") or "Aachen destination"
-    bundle["researchedAt"] = "2026-08-17T20:00:00Z"
-    bundle["question"]["questionRef"] = "aachen-journey-smoke"
-    bundle["question"]["text"] = "Deterministic Aachen public-transit Journey acceptance destination."
-    bundle["question"]["area"]["center"] = {"label": origin_name, "coordinate": origin}
-    bundle["question"]["area"]["radiusMeters"] = 25000
-    candidate = bundle["candidates"][0]
-    candidate["candidateRef"] = "journey-destination"
-    candidate["displayName"] = "Journey Destination"
-    candidate["identity"]["canonicalUri"] = "https://example.org/orientation/journey-destination"
-    candidate["researchedLocation"] = {
-        "label": destination_name,
-        "coordinate": destination,
-        "sourceRefs": ["source-official"],
-    }
-    return bundle
-
-
 def local_datetime_value(offset_timestamp: str) -> str:
     return datetime.fromisoformat(offset_timestamp).strftime("%Y-%m-%dT%H:%M")
 
@@ -186,20 +163,38 @@ def open_app(session: str) -> None:
     verify_workspace_layout(session)
 
 
-def select_origin_and_destination(session: str, bundle: dict, metadata: dict) -> None:
-    set_value(session, "#bundle-json", json.dumps(bundle))
-    click(session, "#import-bundle")
-    wait_for(session, "Journey discovery import", "return document.querySelector('#import-status')?.textContent?.includes('Collection imported');")
-    wait_for(session, "Journey candidate list", "return document.querySelectorAll('#candidate-list .candidate-button').length === 1;")
-    click(session, "#candidate-list .candidate-button")
-    wait_for(session, "Journey destination selection", "return document.querySelector('#selected-destination')?.textContent?.startsWith('Journey Destination');")
+def search_and_select(session: str, query_selector: str, button_selector: str, results_selector: str, status_selector: str, query: str) -> None:
+    set_value(session, query_selector, query)
+    click(session, button_selector)
+    wait_for(session, f"place results for {query}", f"return document.querySelectorAll({json.dumps(results_selector + ' .place-result')}).length >= 1;", timeout=30)
+    click(session, results_selector + " .place-result")
+    wait_for(session, f"place selection for {query}", f"return document.querySelector({json.dumps(status_selector)})?.textContent?.startsWith('Selected');")
 
+
+def select_origin_and_destination(session: str, metadata: dict) -> None:
     origin_name = metadata.get("originStopName") or "Aachen"
-    set_value(session, "#route-origin-query", origin_name)
-    click(session, "#route-origin-search")
-    wait_for(session, "Journey origin result", "return document.querySelectorAll('#route-origin-results .place-result').length >= 1;", timeout=30)
-    click(session, "#route-origin-results .place-result")
-    wait_for(session, "Journey origin selection", "return document.querySelector('#route-origin-status')?.textContent?.startsWith('Selected:');")
+    destination_name = metadata.get("destinationStopName") or "Aachen"
+    search_and_select(
+        session,
+        "#route-origin-query",
+        "#route-origin-search",
+        "#route-origin-results",
+        "#route-origin-status",
+        origin_name,
+    )
+    search_and_select(
+        session,
+        "#route-destination-query",
+        "#route-destination-search",
+        "#route-destination-results",
+        "#route-destination-status",
+        destination_name,
+    )
+    selected = text(session, "#selected-destination")
+    if not selected.startswith("Destination:"):
+        raise AssertionError(f"Destination summary is not visible after direct search: {selected}")
+    if execute(session, "return document.querySelectorAll('#candidate-list .candidate-button').length;") != 0:
+        raise AssertionError("Ad-hoc Journey acceptance unexpectedly depends on a Discovery Candidate")
 
 
 def request_and_show_journey(session: str, request: dict) -> int:
@@ -233,15 +228,14 @@ def request_and_show_journey(session: str, request: dict) -> int:
     return int(count)
 
 
-def run_browser(request_path: str, metadata_path: str, example_path: str) -> None:
+def run_browser(request_path: str, metadata_path: str, _example_path: str) -> None:
     request = load_json(request_path)
     metadata = load_json(metadata_path)
-    bundle = make_bundle(request, metadata, example_path)
     session = new_session()
-    print("Chrome session", session, "standalone Journey acceptance")
+    print("Chrome session", session, "standalone ad-hoc Journey acceptance")
     try:
         open_app(session)
-        select_origin_and_destination(session, bundle, metadata)
+        select_origin_and_destination(session, metadata)
         alternatives = request_and_show_journey(session, request)
 
         if alternatives > 1:
@@ -252,8 +246,6 @@ def run_browser(request_path: str, metadata_path: str, example_path: str) -> Non
         wait_for(session, "Journey clear on direct-mode switch", "return document.querySelector('#journey-results').hidden;")
         if not execute(session, "return document.querySelector('#journey-time-controls').hidden;"):
             raise AssertionError("Transit time controls remained visible after switching to direct routing")
-        if execute(session, "return document.querySelectorAll('#candidate-list .candidate-button').length;") != 1:
-            raise AssertionError("Switching navigation modes corrupted discovery state")
 
         set_value(session, "#route-profile", "TRANSIT")
         request_and_show_journey(session, request)
@@ -261,10 +253,10 @@ def run_browser(request_path: str, metadata_path: str, example_path: str) -> Non
         wait_for(session, "Journey clear", "return document.querySelector('#route-status')?.textContent === 'No navigation requested.';")
         if not execute(session, "return document.querySelector('#journey-results').hidden;"):
             raise AssertionError("Journey alternatives remained visible after clear")
-        if execute(session, "return document.querySelectorAll('#candidate-list .candidate-button').length;") != 1:
-            raise AssertionError("Clearing Journey corrupted discovery state")
+        if not text(session, "#route-origin-status").startswith("Selected:") or not text(session, "#route-destination-status").startswith("Selected:"):
+            raise AssertionError("Clearing navigation unexpectedly cleared selected endpoints")
 
-        print(f"PASS: standalone app planned and rendered {alternatives} real public-transit Journey alternative(s)")
+        print(f"PASS: standalone app planned and rendered {alternatives} real place-to-place public-transit Journey alternative(s) without research import")
     finally:
         try:
             webdriver("DELETE", f"/session/{session}")
