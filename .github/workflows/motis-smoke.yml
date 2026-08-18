@@ -179,9 +179,10 @@ jobs:
           python3 - <<'PY'
           import json
           response = json.load(open('/tmp/orientation-motis-geocode.json', encoding='utf-8'))
-          if not response:
-              raise SystemExit('Orientation returned no MOTIS-backed place search results')
-          first = response[0]
+          places = response.get('places', []) if isinstance(response, dict) else []
+          if not places:
+              raise SystemExit(f'Orientation returned no MOTIS-backed place search results: {response}')
+          first = places[0]
           if not str(first.get('providerReference', '')).startswith('motis:'):
               raise SystemExit(f'Unexpected place provider reference: {first}')
           print(first)
