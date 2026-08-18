@@ -48,7 +48,7 @@ jobs:
             exit 1
           fi
 
-      - name: Ensure release milestone and assignments
+      - name: Resolve release milestone and release issue
         id: milestone
         env:
           GH_TOKEN: ${{ github.token }}
@@ -56,19 +56,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          milestone="$(gh api "repos/$GITHUB_REPOSITORY/milestones?state=all&per_page=100" --jq ".[] | select(.title == \"$VERSION\") | .number" | head -n 1)"
-          if [[ -z "$milestone" ]]; then
-            milestone="$(gh api --method POST "repos/$GITHUB_REPOSITORY/milestones" \
-              -f title="$VERSION" \
-              -f description="Orientation $VERSION release work packages." \
-              --jq '.number')"
-          fi
-          for issue in 20 21 22 23 24; do
-            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/$issue" -F milestone="$milestone" >/dev/null
-          done
-          echo "number=$milestone" >> "$GITHUB_OUTPUT"
 
-      - name: Create tag and GitHub Release
+          milestone="$(gh api --paginate "repos/$GITHUB_REPOSITORY/milestones?state=open&per_page=100" \
+            --jq ".[] | select(.title == \"$VERSION\") | .number" | head -n 1)"
+          if [[ -z "$milestone" ]]; then
+            echo "Open release milestone $VERSION does not exist."
+            exit 1
+          fi
+
+          open_issues="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues?state=open&milestone=$milestone&per_page=100" \
+            --jq '.[] | select(has("pull_request") | not) | [.number, .title] | @tsv')"
+          issue_count="$(printf '%s\n' "$open_issues" | sed '/^$/d' | wc -l | tr -d ' ')"
+          if [[ "$issue_count" != "1" ]]; then
+            echo "Expected exactly one open release issue in milestone $VERSION, found $issue_count."
+            printf '%s\n' "$open_issues"
+            exit 1
+          fi
+
+          release_issue="$(printf '%s\n' "$open_issues" | cut -f1)"
+          release_title="$(printf '%s\n' "$open_issues" | cut -f2-)"
+          if [[ "$release_title" != *"$VERSION"* ]]; then
+            echo "Open milestone issue #$release_issue does not identify $VERSION: $release_title"
+            exit 1
+          fi
+
+          echo "number=$milestone" >> "$GITHUB_OUTPUT"
+          echo "release_issue=$release_issue" >> "$GITHUB_OUTPUT"
+
+      - name: Create exact tag and GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
@@ -78,32 +93,19 @@ jobs:
           git tag "$VERSION" "$GITHUB_SHA"
           git push origin "refs/tags/$VERSION"
 
-          cat > /tmp/release-notes.md <<'EOF'
-          Orientation v0.4.0 establishes the first independently useful persistent discovery baseline.
-
-          - Spatial Research Contract 1.0 with explicit criteria, provenance and heuristic/evidence boundaries.
-          - Deterministic external-research prompt generation with no paid LLM/API requirement.
-          - Strict validate-before-mutation import and local SQLite discovery persistence.
-          - Restart/reopen support with deterministic unchanged re-import handling.
-          - First standalone Orientation discovery application: question -> prompt -> import -> collection -> map/evidence -> destination -> DRIVING/CYCLING/WALKING route.
-          - Existing Reference Host, Embed Host and `orientation.host-bridge` 1.0 remain compatible.
-          - Dependency security gate added; Log4j API and Jackson Databind managed versions patched to the fixed releases identified during hardening.
-          - Full backend/map CI, dependency scan, real Valhalla routing, Reference Host Chrome smoke and standalone import/restart/reopen/route smoke passed before promotion.
-
-          This release does not claim public transit, realtime transit, shared mobility, multimodal journey planning, turn-by-turn live navigation, automatic background research, paid LLM/API execution, Vocation migration completion, cross-device synchronization or physical-iPhone validation.
-          EOF
-
           gh release create "$VERSION" \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "Orientation $VERSION" \
-            --notes-file /tmp/release-notes.md
+            --generate-notes
 
       - name: Close release issue and milestone
         env:
           GH_TOKEN: ${{ github.token }}
           MILESTONE: ${{ steps.milestone.outputs.number }}
+          RELEASE_ISSUE: ${{ steps.milestone.outputs.release_issue }}
         shell: bash
         run: |
           set -euo pipefail
-          gh issue close 24 --repo "$GITHUB_REPOSITORY" --reason completed
+          gh issue close "$RELEASE_ISSUE" --repo "$GITHUB_REPOSITORY" --reason completed
           gh api --method PATCH "repos/$GITHUB_REPOSITORY/milestones/$MILESTONE" -f state=closed >/dev/null
