@@ -1,25 +1,33 @@
 # Orientation – Standalone Public-Transit Journey Flow
 
-**Status:** v0.5.0 Issue #43 standalone product slice.
+**Status:** v0.5.0 Journey product flow, with post-v0.5 standalone usability hardening.
 
-The standalone Orientation application composes the provider-neutral Journey boundary from Issue #40, the MOTIS adapter from Issue #41 and the reusable Journey Map Surface from Issue #42 into an end-user public-transit workflow. Direct routing remains available beside it.
+The standalone Orientation application composes the provider-neutral Journey boundary, MOTIS adapter and reusable Journey Map Surface into an end-user public-transit workflow. Direct routing remains available beside it.
+
+## Reachability and layout
+
+Navigate is a first-class workspace area, not a control hidden below the map.
+
+- the header provides direct Research / Collections / Navigate jumps;
+- on wide desktop layouts, the long workspace columns scroll independently inside the viewport;
+- Navigate is placed before the map in the navigation/map column;
+- on narrow/mobile layouts the app returns to normal document scrolling and keeps the section jumps touch-reachable;
+- responsive browser support does not imply that a full local MOTIS/Valhalla dataset is installed on the phone.
+
+The production-browser MOTIS smoke verifies both desktop scroll reachability and the mobile document-scroll/Navigate-jump behavior.
 
 ## Product flow
 
 The Navigate card reuses the same explicit origin and selected mapped discovery candidate used by direct routing.
+
+Origin Place Search now goes through Orientation's local MOTIS-backed Place boundary. The app never contacts a hosted geocoder directly.
 
 For Public transit the user chooses:
 
 - `DEPART_AT` or `ARRIVE_BY`;
 - a local date and time.
 
-The browser converts that local value into an offset-aware ISO-8601 timestamp before calling:
-
-```text
-POST /api/v1/journeys
-```
-
-The application does not infer a server timezone.
+The browser converts that local value into an offset-aware ISO-8601 timestamp before calling `POST /api/v1/journeys`.
 
 ## Journey alternatives
 
@@ -41,48 +49,40 @@ Selecting an alternative sends only the provider-neutral Journey overlay to the 
 
 Direct Route and public-transit Journey are separate application states.
 
-- requesting a direct Route clears any Journey presentation;
-- requesting a Journey clears any direct Route presentation;
-- changing origin, destination, travel mode or Journey time invalidates stale navigation state;
+- requesting a direct Route clears Journey presentation;
+- requesting a Journey clears direct Route presentation;
+- changing origin, destination, mode or Journey time invalidates stale navigation state;
 - stale in-flight requests are aborted and sequence-guarded;
 - clearing navigation removes Route/Journey presentation without changing the active discovery collection or candidate evidence;
-- switching back to direct routing removes Journey alternatives and time controls.
+- switching back to direct routing removes Journey alternatives/time controls.
 
-The Map Surface itself remains capable of holding Route and Journey independently; the standalone product owns this mutually exclusive presentation policy.
+The Map Surface itself remains capable of holding Route and Journey independently; the standalone product owns the mutually exclusive presentation policy.
 
 ## Failure states
 
-The standalone client maps stable Orientation Journey failures to product messages for:
+Stable product messages cover invalid request, no Journey found, provider rate limiting, invalid provider response, timeout and unavailability. Provider-specific error bodies are not exposed.
 
-- invalid request;
-- no Journey found;
-- provider rate limiting;
-- invalid provider response;
-- timeout/unavailability.
-
-Provider-specific error bodies are not exposed to the product UI.
+If local MOTIS is unavailable, Orientation fails visibly; it does not silently forward the request to Transitous or another hosted provider.
 
 ## Acceptance
 
-A focused production-browser smoke runs against the same pinned self-hosted MOTIS v2.11.0/Aachen OSM+GTFS fixture used by the provider acceptance gate. It:
+The production-browser smoke uses the same pinned self-hosted MOTIS v2.11.0/Aachen OSM+GTFS fixture as provider acceptance. It:
 
-1. imports a deterministic mapped discovery destination through the standalone UI;
-2. selects an origin through a deterministic local Photon stub;
-3. chooses Public transit and the pinned fixture time;
-4. obtains real Journey alternatives through Orientation and self-hosted MOTIS;
-5. renders a selected Journey on the Map Surface;
-6. verifies mode switching clears Journey presentation without losing discovery state;
-7. requests another Journey and verifies explicit clear preserves discovery state.
+1. verifies desktop/mobile workspace reachability;
+2. imports a deterministic mapped discovery destination;
+3. selects an origin through real local MOTIS geocoding;
+4. chooses Public transit and pinned fixture time;
+5. obtains real Journey alternatives through Orientation and self-hosted MOTIS;
+6. renders a selected Journey;
+7. verifies mode switching and explicit clear preserve Discovery state.
 
-No public Transitous request is required for this acceptance path.
+No public Transitous or Photon request is required.
 
 ## Non-goals
-
-This slice does not add:
 
 - shared mobility/GBFS;
 - fares, ticket purchase or booking;
 - turn-by-turn live navigation;
-- Vocation-specific behavior;
-- automatic provider selection;
+- automatic provider selection/fallback;
+- phone-local large-dataset packaging;
 - a new `orientation.host-bridge` version.
