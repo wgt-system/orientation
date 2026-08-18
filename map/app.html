@@ -9,15 +9,22 @@
   <body>
     <main class="orientation-app">
       <header class="app-header">
-        <div>
-          <p class="eyebrow">WGT SYSTEM · ORIENTATION</p>
-          <h1>Discover places. Keep the evidence. Find the way.</h1>
+        <div class="app-header-main">
+          <div>
+            <p class="eyebrow">WGT SYSTEM · ORIENTATION</p>
+            <h1>Discover places. Keep the evidence. Find the way.</h1>
+          </div>
+          <nav class="app-jump-nav" aria-label="Workspace sections">
+            <a href="#research-panel">Research</a>
+            <a href="#collections-panel">Collections</a>
+            <a href="#navigate-card">Navigate</a>
+          </nav>
         </div>
         <p class="app-header-copy">Personal spatial research and mobility, stored locally.</p>
       </header>
 
       <section class="workspace" aria-label="Orientation discovery workspace">
-        <aside class="research-panel">
+        <aside id="research-panel" class="research-panel workspace-column">
           <section class="card" aria-labelledby="research-title">
             <div class="section-heading">
               <div>
@@ -74,7 +81,7 @@
           </section>
         </aside>
 
-        <section class="collection-panel card" aria-labelledby="collections-title">
+        <section id="collections-panel" class="collection-panel card workspace-column" aria-labelledby="collections-title">
           <div class="section-heading">
             <div>
               <p class="kicker">Collections</p>
@@ -112,11 +119,8 @@
           </div>
         </section>
 
-        <section class="map-panel">
-          <section id="app-map" class="app-map" aria-label="Orientation discovery map">
-            <p id="app-map-status" class="map-status" hidden role="status"></p>
-          </section>
-          <section class="route-card card" aria-labelledby="route-title">
+        <section class="map-panel workspace-column">
+          <section id="navigate-card" class="route-card card" aria-labelledby="route-title">
             <div class="section-heading compact">
               <div>
                 <p class="kicker">Navigate</p>
@@ -159,10 +163,15 @@
               <button id="request-route" type="button" disabled>Route</button>
               <button id="clear-route" class="secondary" type="button" disabled>Clear</button>
             </div>
-            <p id="route-status" class="status" role="status" aria-live="polite">No route requested.</p>
+            <p id="route-status" class="status" role="status" aria-live="polite">No navigation requested.</p>
             <div id="route-summary" class="route-summary" hidden></div>
             <div id="journey-results" class="journey-results" hidden aria-label="Public-transit journey alternatives"></div>
           </section>
+
+          <section id="app-map" class="app-map" aria-label="Orientation discovery map">
+            <p id="app-map-status" class="map-status" hidden role="status"></p>
+          </section>
+
           <section id="candidate-detail" class="candidate-detail card" hidden aria-labelledby="candidate-detail-title">
             <p class="kicker">Evidence</p>
             <h2 id="candidate-detail-title"></h2>
