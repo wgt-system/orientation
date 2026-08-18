@@ -2,7 +2,7 @@ services:
   valhalla:
     image: ghcr.io/valhalla/valhalla-scripted:3.8.3
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     environment:
       tile_urls: https://download.geofabrik.de/europe/germany/hamburg-260801.osm.pbf
       build_elevation: "False"

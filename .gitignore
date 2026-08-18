@@ -26,6 +26,7 @@ Thumbs.db
 !.env.example
 *.log
 data/
+.runtime/
 
 # Bootstrap archive must never be committed
 *.zip

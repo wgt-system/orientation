@@ -1,0 +1,28 @@
+name: Windows Runtime Script
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/windows-runtime-script.yml"
+      - "scripts/local-runtime.ps1"
+      - "deployment/local-hamburg/**"
+      - "deployment/valhalla/**"
+  push:
+    branches: [dev, main]
+    paths:
+      - ".github/workflows/windows-runtime-script.yml"
+      - "scripts/local-runtime.ps1"
+      - "deployment/local-hamburg/**"
+      - "deployment/valhalla/**"
+
+permissions:
+  contents: read
+
+jobs:
+  powershell-entrypoint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Parse and run offline status command
+        shell: powershell
+        run: .\scripts\local-runtime.ps1 status
