@@ -1,6 +1,6 @@
 # Orientation – Architecture
 
-**Status:** v0.5.0 is released and accepted on 2026-08-18.
+**Status:** v0.5.0 released; post-v0.5 local-first/runtime-usability hardening active on `dev`.
 
 ## Logical architecture
 
@@ -12,79 +12,56 @@
         |  +---------------------------+         +----------------------+  |
         |  | domain/application        |         | Standalone App       |  |
         |  | Place / Route / Journey   |         | Reference Host       |  |
-        |  | ports                     |         | Embed Host           |  |
-        |  | discovery repository port |         | reusable Map Surface |  |
-        |  +------------+--------------+         +----------+-----------+  |
-        |               |                                   |              |
+        |  | discovery repository port |         | Embed Host           |  |
+        |  +------------+--------------+         | reusable Map Surface |  |
+        |               |                        +----------+-----------+  |
         |       +-------+----------------+                  |              |
         |       | provider adapters      |                  |              |
-        |       | Photon / Valhalla /    |                  |              |
-        |       | MOTIS                  |                  |              |
+        |       | MOTIS / Valhalla       |                  |              |
         |       +-------+----------------+                  |              |
         |               |                                   |              |
         |       +-------+--------+                          |              |
         |       | local SQLite   |                          |              |
-        |       | discovery DB   |                          |              |
         |       +----------------+                          |              |
         +---------------|-----------------------------------|--------------+
                         |                                   |
-                external providers /                 browser / WGT host
-                local mobility runtimes
+             local mobility/geodata                  browser / WGT host
+                   runtimes                                |
+                                                         external
+                                                      OpenFreeMap only
 ```
 
-## Technology baseline
+## Backend
 
-### Backend
+- Java 25 LTS, Maven, Spring Boot 4.1.x;
+- framework-independent domain/application layers;
+- provider interfaces at application boundaries;
+- local SQLite/JDBC persistence for Orientation-owned Discovery Collections.
 
-- Java 25 LTS
-- Maven
-- Spring Boot 4.1.x
-- framework-independent domain/application layers
-- provider interfaces at application boundaries
-- local SQLite/JDBC adapter for accepted Orientation-owned Discovery Collection persistence
+The default backend bind address is `127.0.0.1`. Provider URLs are trusted application configuration, not request parameters.
 
-Spring, JDBC, SQLite, Photon, Valhalla and MOTIS remain host/infrastructure concerns rather than domain types.
+### Place search and reverse geocoding
 
-Place/geocoding and mobility-provider interactions are request-scoped/stateless at the application boundary. Durable local state exists only for accepted Orientation-owned discovery collections; see ADR-0007.
+The provider-neutral v0.2 Place boundaries remain unchanged. The current infrastructure adapter uses the same local MOTIS runtime as Journey planning:
 
-### Browser/map runtime
+- `GET /api/v1/geocode` for forward search;
+- `GET /api/v1/reverse-geocode` for reverse geocoding.
 
-- TypeScript
-- MapLibre GL JS 6
-- ESM/Vite
-- framework-independent reusable map core
+Photon is historical v0.2 infrastructure and is no longer part of the current runtime. There is no automatic hosted fallback. Browser hosts call Orientation `/api/v1/places/*` only.
 
-The map package produces three browser entries:
+### Direct Route
 
-1. `app.html` — first-class standalone Orientation product surface;
-2. `index.html` — Reference/acceptance/development host for isolated generic capabilities;
-3. `embed.html` — provider-neutral Embed Host exposing `orientation.host-bridge` 1.0.
+Valhalla remains behind `RoutingPort` for exactly:
 
-The standalone app composes Orientation-owned prompt, discovery, place, direct Route and public-transit Journey APIs. Product controls do not become part of the reusable Map Surface or Host Bridge.
+- DRIVING;
+- CYCLING;
+- WALKING.
 
-The Reference Host remains a validation surface for generic map/place/direct-routing behavior. The Embed Host remains intentionally narrow and contains no standalone-product/provider-domain UI.
+The default Valhalla endpoint is local `127.0.0.1:8002`.
 
-OpenFreeMap Liberty remains the default external street basemap. MapLibre is infrastructure; renderer input/output contracts expose Orientation types only.
+### Public-transit Journey
 
-Do not depend on React/Avalonia/Vocation semantics in the reusable renderer core.
-
-## Place/geocoding
-
-The v0.2 boundary exposes provider-neutral place search and reverse geocoding. Photon is the current configurable infrastructure adapter.
-
-Browser hosts call Orientation `/api/v1/places/*` boundaries and never call Photon directly. Current device position is not automatically forwarded to external providers.
-
-## Direct Route
-
-Valhalla remains the selected upstream engine behind `RoutingPort`.
-
-The released v0.3 boundary provides two-point DRIVING/CYCLING/WALKING planning, decoded Orientation Route geometry, distance/duration, Map Surface Route overlays and explicit replace/clear behavior.
-
-This direct Route model remains unchanged in v0.5. Public transit is not another `TravelProfile` value.
-
-## Public-transit Journey
-
-ADR-0008 defines the separate time-dependent Journey boundary.
+ADR-0008 defines a separate time-dependent Journey boundary:
 
 ```text
 JourneyRequest
@@ -93,108 +70,81 @@ JourneyRequest
   offset-aware time
         |
         v
-JourneyService -> JourneyPort
-        |
-        v
-MOTIS v2.11.0 adapter
+JourneyService -> JourneyPort -> local MOTIS
         |
         v
 JourneyPlan
-  -> alternatives
-  -> ordered WALK/transit legs
-  -> scheduled + optional realtime timing
-  -> bounded decoded geometry
+  alternatives
+  ordered WALK/transit legs
+  scheduled + optional realtime timing
+  bounded decoded geometry
 ```
 
-MOTIS provider DTOs, mode enums and error bodies stay inside infrastructure. Shared/rental/ODM/ride-sharing modes are excluded from the accepted v0.5 transit request rather than silently normalized into public transit.
+MOTIS provider DTOs/modes/errors remain infrastructure details. Shared/rental/ODM/ride-sharing modes are outside the accepted v0.5 Journey slice.
 
-Default configuration targets local MOTIS. A hosted Transitous endpoint may be configured explicitly for reference/manual use, but deterministic acceptance and release evidence use a pinned self-hosted MOTIS runtime and pinned OSM/GTFS fixture.
+The default MOTIS endpoint is local `127.0.0.1:8081`. No public Transitous or other hosted service is used as an automatic fallback.
 
-The reusable Map Surface has a dedicated Journey controller/source/layer set separate from the existing Route overlay. WALK/transit semantics and explicit transit-stop markers do not rely on color alone. The standalone product decides when switching modes should clear Route or Journey presentation; the reusable Map Surface does not silently couple the two states.
+## Browser/map runtime
 
-## Discovery acquisition and persistence
+- TypeScript;
+- MapLibre GL JS 6;
+- ESM/Vite;
+- framework-independent reusable map core.
 
-The v0.4 acquisition path remains:
+Entries:
 
-```text
-explicit SpatialResearchQuestion
-       |
-       v
-SpatialResearchPromptService
-       |
-       v
-external manual research / ChatGPT
-       |
-       v
-Spatial Research Bundle 1.0
-       |
-       v
-semantic + strict-shape validation
-       |
-       v
-application ACL / translation
-       |
-       v
-DiscoveryCollection
-       |
-       v
-DiscoveryRepository -> local SQLite
-```
+1. `app.html` — standalone Orientation product;
+2. `index.html` — Reference/acceptance host;
+3. `embed.html` — Embed Host with `orientation.host-bridge` 1.0.
 
-The external bundle is not the persistence model. Research evidence, provider-backed Places and Orientation-derived mobility results retain distinct authority/provenance.
+The standalone app composes prompt, discovery, place, direct Route and Journey APIs. Product controls remain outside the reusable Map Surface and Host Bridge.
 
-SQLite is a local implementation detail. Cross-device delivery is not implied by local persistence and must use the Conveyance decision model if a concrete requirement appears.
+OpenFreeMap Liberty is the intentional external basemap. MapLibre requests hosted style/tile resources for the visible map; no other semantic provider should be contacted silently by the default runtime.
 
-## Process/deployment model
+Desktop uses independently scrollable Research, Collections and map/navigation workspace columns. Narrow/mobile layouts return to normal document scrolling with direct jump navigation to Research, Collections and Navigate.
 
-A bounded context is not a single-process prescription.
-
-Current standalone development/acceptance can compose:
+## Local-first runtime topology
 
 ```text
 Browser
+  +-- OpenFreeMap (external basemap)
   |
-  +-- Standalone Orientation App / Reference Host
-  |        |
-  |        +-- reusable Orientation Map Surface
-  |
-  +-- Orientation Java backend
-             |
-             +-- local SQLite discovery database
-             +-- Photon-compatible Place provider
-             +-- Valhalla direct-routing runtime
-             +-- MOTIS public-transit runtime
+  +-- Orientation @ 127.0.0.1
+          +-- SQLite
+          +-- MOTIS @ 127.0.0.1:8081
+          |      +-- geocode/reverse
+          |      +-- public transit
+          +-- Valhalla @ 127.0.0.1:8002
+                 +-- direct Route
 ```
 
-WGT may instead embed the reusable Orientation surface and invoke accepted Orientation boundaries through its own product composition. That does not make the standalone app the WGT UI or make WGT authoritative for Orientation state.
+Search text, route origin/destination and Journey time stay on the local semantic-provider path by default. A missing local runtime produces an explicit provider failure; it does not trigger external forwarding.
 
-Exact local/remote topology remains capability/platform-specific.
+This topology does **not** prescribe putting full MOTIS/Valhalla datasets on a phone. Mobile runtime distribution, regional extracts and offline capability require separate deployment decisions.
 
-## Browser/runtime acceptance
+## Discovery acquisition and persistence
 
-Two complementary real runtime gates protect v0.5:
+```text
+SpatialResearchQuestion
+       -> Orientation prompt
+       -> explicit external user-controlled research
+       -> Spatial Research Bundle 1.0
+       -> strict validation / ACL translation
+       -> DiscoveryCollection
+       -> local SQLite
+```
 
-1. the existing Valhalla/Photon/Chrome smoke retains direct DRIVING/CYCLING/WALKING, Reference Host and v0.4 standalone import → restart → reopen → direct-route evidence;
-2. the MOTIS Journey smoke imports pinned Aachen OSM/GTFS into pinned MOTIS, calls the Journey boundary, then drives the production standalone app in Chrome through discovery destination selection, explicit origin, public-transit planning, Journey rendering, mode switching and clear behavior.
+The external research interaction is initiated by the user; imported research remains evidence/provenance, not authoritative provider truth. SQLite never becomes a copy of another bounded context's database.
+
+## Runtime acceptance
+
+Two complementary gates protect current behavior:
+
+1. Valhalla/Chrome: direct DRIVING/CYCLING/WALKING plus v0.4 import → restart → reopen → direct-route regression, using a local deterministic MOTIS-compatible geocode stub;
+2. MOTIS/Chrome: pinned self-hosted MOTIS + pinned Aachen OSM/GTFS, real MOTIS-backed place search, real Journey planning and production standalone browser flow.
 
 Neither path changes `orientation.host-bridge` 1.0.
 
-## WGT integration gate
-
-Orientation generic capability acceptance remains distinct from WGT product/platform validation. Current Orientation releases do not claim physical-iPhone support merely because the browser/map artifacts exist.
-
-## Legacy consumer migration targets
-
-- Vocation React Leaflet renderer
-- Vocation Nominatim geocoder implementation
-- historical WGT generic map implementations where not already retired
-
-Consumer migration remains work in the owning consumer repository after the relevant Orientation replacement gates pass.
-
 ## Data ownership
 
-No cross-context database access.
-
-Orientation SQLite stores Orientation-owned personal discovery state and required research provenance only. It must not become an authoritative copy of Vocation, Illumination or WGT business state.
-
-Technical provider caches/indexes, if introduced later, remain separate in authority from durable Discovery Collections and require their own lifecycle justification.
+No cross-context database access. Orientation persists Orientation-owned discovery state and research provenance only. Provider indexes/caches remain technical infrastructure and never become authoritative foreign-domain state.
