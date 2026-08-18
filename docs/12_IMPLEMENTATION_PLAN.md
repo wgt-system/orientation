@@ -1,227 +1,152 @@
 # Orientation – Implementation Plan
 
-**Status:** Control-plane plan; v0.1.0, v0.1.1, v0.1.2, v0.2.0 and v0.3.0 released. v0.4.0 implementation is complete and is being promoted after the final #24 release gate.
+**Status:** v0.1.0 through v0.5.0 are released. v0.5.0 completed packages #40–#44 and was released on 2026-08-18 after explicit Control Plane approval and final promotion.
 
-Milestone names, when created, use semantic versions only.
+Milestone names, when created, use semantic versions only. Do not pre-create speculative future milestone ladders.
 
-## v0.1.0
+## Release ledger
 
-Focus: Orientation map-surface foundation. Released.
+### v0.1.0 — Map-surface foundation
 
-Goal: deliver the first reusable Orientation map-surface capability: a stable
-provider-neutral Spatial Scene boundary, rich spatial feature interaction,
-host-supplied current-location presentation, and an embeddable host bridge
-suited to WGT browser/WebView integration.
+Released.
 
-The repository bootstrap and CI are complete in the published baseline. v0.1.0
-therefore contains these four concrete work packages:
+Delivered the provider-neutral Spatial Scene and reusable Map Surface, rich feature interaction, host-supplied Current Location, `orientation.host-bridge` 1.0, Reference Host and Embed Host.
 
-1. **Stabilize the Spatial Scene and Map Surface boundary** — evolve the existing
-   SpatialScene/SpatialFeature seed with deterministic scene updates, identity and
-   validation, viewport intent/fit behavior, renderer lifecycle/error/ready
-   semantics, opaque selection events, and clean destroy/recreate behavior.
-2. **Implement rich spatial feature interaction** — add generic information,
-   SpatialResource and SpatialAction presentation, host-mediated activation events,
-   safe URI/text handling, accessibility, and coherent reference-host details.
-   Rich external resources are explicitly allowed; no URL-free restriction applies.
-3. **Add host-supplied current-location presentation** — accept PositionFix with
-   coordinate, accuracy and observed-at data, render/update/remove the location and
-   accuracy independently of provider features, and keep permission/history outside
-   Orientation core.
-4. **Provide the embeddable Orientation host bridge and harden v0.1.0** — define
-   the narrow versioned scene-in/event-out bridge required for WGT WebView hosting,
-   validate inbound messages, cover lifecycle/reload, package the provider-neutral
-   artifact, and complete browser/performance/regression/readiness checks.
+### v0.1.1 — Basemap patch
 
-Issues #1, #2, #3 and #4 have implementation and CI evidence on `dev`.
+Released on 2026-08-16.
 
-Dependency order:
+Replaced the MapLibre demonstration basemap with OpenFreeMap Liberty and made renderer/basemap failure visible while preserving v0.1.0 contracts.
 
-```text
-Issue 1
-├── Issue 2
-├── Issue 3
-└── Issue 4 (after Issues 1, 2 and 3)
-```
+### v0.1.2 — MapLibre worker runtime patch
 
-v0.1.0 does not add routing, Valhalla, place discovery, geocoding migration,
-Vocation contract migration, or foreign-domain semantics. It does not introduce
-persistence, a broad network API, React/Avalonia/Vocation dependencies, or a new
-generic map microservice.
+Released on 2026-08-16.
 
-Do not delete legacy Vocation/WGT renderers before replacement gates pass.
+Bundled and registered the MapLibre GL JS 6 worker explicitly with Vite and added vector-source readiness evidence for production browser hosts.
 
-## v0.1.1
-
-Focus: Basemap patch. Released on 2026-08-16.
-
-This patch replaces the MapLibre demonstration style with the default OpenFreeMap
-Liberty street basemap for the Reference and Embed Hosts. It keeps the accepted
-v0.1.0 Spatial Scene, Current Location, viewport and `orientation.host-bridge`
-1.0 semantics unchanged, and makes Reference Host basemap failures visible.
-The patch includes OpenFreeMap Liberty as the default basemap, real
-street/place rendering instead of the MapLibre demonstration style, visible
-attribution, Reference Host basemap/renderer failure status, and unchanged
-Embed Host bridge/status semantics. Geocoding, Place Discovery, Routing/
-Valhalla and standalone UI redesign remain future work.
-
-`orientation.host-bridge` 1.0 and all schemas remain unchanged.
-
-## v0.1.2
-
-Focus: MapLibre GL JS 6 Vite worker runtime patch. Released on 2026-08-16.
-
-Bundle and register the MapLibre worker explicitly with Vite so OpenFreeMap
-vector tiles render reliably in the Reference and Embed Hosts. The released
-behavior includes the explicit Vite worker asset, `setWorkerUrl(...)` before
-Map creation, an `openmaptiles`-loaded renderer readiness gate, and a
-15-second guard against silent worker/vector bootstrap failure. Raster-only
-relief can appear superficially valid while vector-tile processing is
-unavailable, so acceptance requires the `openmaptiles` source to reach its
-loaded state in both development and production-build browser runs. The
-OpenFreeMap Liberty selection and all v0.1.1 contracts remain unchanged.
-
-`orientation.host-bridge` 1.0, all schemas, Spatial Scene, Current Location,
-Viewport and Resource/Action semantics remain unchanged. Geocoding, Place
-Search/Discovery, Routing/Valhalla, standalone-app redesign, WGT integration
-and physical-iPhone evidence remain unimplemented.
-
-## v0.2.0
-
-Focus: Geocoding and place search.
+### v0.2.0 — Geocoding and place search
 
 Released and accepted on 2026-08-16.
 
-Orientation-owned generic place capability:
+Delivered the Orientation-owned `Place` model, forward place search and reverse geocoding through replaceable application ports, the Photon adapter and narrow first-party HTTP endpoints. Browser hosts call Orientation rather than Photon directly.
+
+Vocation remains authoritative for Work Location/Precision and job-market semantics. Migration of legacy Vocation geocoding/rendering remains consumer work, not Orientation release scope.
+
+### v0.3.0 — Direct routing
+
+Released and accepted on 2026-08-17.
+
+Completed packages #10–#13:
+
+1. provider-neutral `RouteRequest`, `TravelProfile`, `Route`, decoded/bounded geometry, `RoutingPort`/`RoutingService` and `POST /api/v1/routes`;
+2. Valhalla 3.8.3 adapter for DRIVING/CYCLING/WALKING with stable failures and real-provider smoke;
+3. reusable Map Surface Route overlay with replace/clear/lifecycle and antimeridian-safe viewport;
+4. Reference Host Start/Destination search, profile selection and direct-route workflow.
+
+`orientation.host-bridge` remained 1.0. Live navigation, GPS rerouting, persistence and transit were not part of v0.3.0.
+
+### v0.4.0 — Standalone spatial research/discovery
+
+Released and accepted on 2026-08-17.
+
+Completed packages #20–#24:
+
+1. **#20 — Spatial research/import semantics**: versioned Spatial Research Bundle 1.0, criteria, provenance/evidence and strict heuristic/sensitive-trait boundaries.
+2. **#21 — Prompt generation**: deterministic external-research prompts from explicit user criteria; no paid LLM/API requirement and no generic prompt service.
+3. **#22 — Import/persistence**: validate-before-mutation, anti-corruption translation, local SQLite persistence, canonical re-import handling and restart/reopen support.
+4. **#23 — Standalone app**: question → prompt → import → collection → map/evidence → selected destination → DRIVING/CYCLING/WALKING Route.
+5. **#24 — Hardening/release**: backend/map regression, real Valhalla/Chrome product smoke, dependency-security gate and repository/release consistency.
+
+## v0.5.0 — Public-transit Journey
+
+Released and accepted on 2026-08-18.
+
+**Focus:** add first-class time-dependent public-transit planning while preserving the released direct `Route` boundary.
+
+### #40 — Define provider-neutral Journey boundary — complete
+
+Delivered:
+
+- separate `JourneyRequest` / `JourneyPlan` / `Journey` / ordered `JourneyLeg` model;
+- explicit `DEPART_AT` / `ARRIVE_BY` with offset-aware time;
+- provider-neutral transit modes rather than provider enums;
+- scheduled timing plus optional realtime-adjusted timing;
+- bounded alternatives, legs, intermediate stops and decoded geometry;
+- stable provider failures and `POST /api/v1/journeys`.
+
+`TRANSIT` is deliberately not added to the direct-routing `TravelProfile`.
+
+### #41 — Integrate MOTIS v2.11.0 — complete
+
+Delivered:
+
+- MOTIS `/api/v6/plan` behind `JourneyPort`;
+- provider DTO/error/mode isolation;
+- explicit transit-mode request set excluding rental/shared/ODM/ride-sharing modes;
+- bounded provider responses and decoded polyline6 geometry;
+- local MOTIS default configuration;
+- deterministic self-hosted acceptance using pinned MOTIS v2.11.0 and pinned Aachen OSM/GTFS test data.
+
+Transitous may be configured explicitly for reference/manual use but is not a deterministic CI or release dependency.
+
+### #42 — Render Journeys on the Map Surface — complete
+
+Delivered:
+
+- Journey overlay/controller/source/layers separate from direct Route state;
+- ordered WALK/transit geometry;
+- dashed WALK presentation, solid transit presentation and explicit transit-stop markers;
+- deterministic set/replace/clear/destroy behavior;
+- antimeridian-safe Journey viewport fitting;
+- no change to `orientation.host-bridge` 1.0.
+
+### #43 — Integrate Journey planning into the standalone app — complete
+
+Delivered:
+
+- Public transit beside DRIVING/CYCLING/WALKING;
+- explicit origin, selected discovery destination, depart-at/arrive-by and local date/time input;
+- offset-aware Journey requests;
+- alternative comparison with departure/arrival, duration, transfers and ordered legs;
+- explicit scheduled vs realtime-adjusted timing presentation;
+- alternative selection and Journey Map Surface rendering;
+- stale-request cancellation and Route/Journey switching;
+- Journey replacement/clear without corrupting discovery state;
+- focused production-browser acceptance against self-hosted MOTIS.
+
+### #44 — Harden and release v0.5.0 — complete
+
+Release hardening proved on the final release candidate:
+
+- backend CI PASS;
+- map tests/typecheck/production build PASS;
+- dependency-security gate PASS;
+- deterministic self-hosted MOTIS Journey smoke PASS;
+- production standalone Journey browser acceptance PASS;
+- existing Valhalla DRIVING/CYCLING/WALKING + Reference Host regression PASS;
+- existing v0.4 import → restart → reopen → direct-route regression PASS;
+- repository documentation and release-state consistency;
+- unchanged `orientation.host-bridge` 1.0 consumer contract;
+- no unsupported claims for shared mobility, fares/ticketing, full realtime coverage, live navigation, Vocation migration or physical-iPhone support.
+
+Explicit Control Plane approval on 2026-08-18 authorized the final `dev` → `main` promotion, `v0.5.0` tag/GitHub Release and closure of #44 plus the v0.5.0 milestone.
+
+## Dependency order
 
 ```text
-text query -> Orientation Place Search -> provider-backed Place candidates
-           -> coordinate/place information -> later map focus/presentation
+#40
+ └── #41
 
-coordinate -> Orientation Reverse Geocoding -> generic Place result
+#40 + #41
+ └── #42
+
+#41 + #42
+ └── #43
+
+#40 + #41 + #42 + #43
+ └── #44
 ```
-
-Package #7 delivered the provider-neutral backend boundary, application use
-cases, Photon adapter and narrow HTTP endpoints. Package #8 delivered the
-Reference Host integration through relative `/api` calls, explicit-submit
-search and explicit map-center reverse lookup. It validates first-party DTOs,
-protects request lifecycle state, maps Places to generic Spatial Features,
-replaces the current Scene on selection and leaves the existing PositionFix
-flow untouched.
-
-Final released scope includes the Orientation Place model, forward search,
-reverse geocoding, configurable Photon infrastructure, stable provider error
-mapping, stateless operation, a 1 MiB provider response bound with at most
-`MAX + 1` bytes consumed for unknown-length oversize detection, and canonical
-Photon extent normalization. The browser never calls Photon directly. Jackson
-3/Spring Boot 4.1, OpenFreeMap Liberty, MapLibre 6 worker/vector readiness,
-current-location behavior, `orientation.host-bridge` 1.0 and schemas remain
-unchanged.
-
-Not included in v0.2.0: routing/Valhalla, persistence/database, automatic
-device-location forwarding, Vocation/WGT migration or standalone-product
-packaging. Vocation migration remains consumer work after this release.
-
-The default development/reference provider is the configurable external Photon
-endpoint `https://photon.komoot.io`; it is not part of Orientation semantics.
-
-Geocoding and place-search requests leave the local process only when explicitly
-submitted. PositionFix and current device location are not forwarded
-automatically. Routing/Valhalla, standalone product packaging and persistence
-remain later work.
-
-Future consumer work after v0.2.0 review:
-
-- Vocation adapter to Orientation geocoding;
-- Vocation rich Published Map Projection successor;
-- remove URL-free design as a permanent constraint;
-- eliminate per-opportunity external-link fetching for map composition where the successor projection makes it unnecessary;
-- migrate Vocation reference UI from Leaflet to Orientation map surface;
-- retire Vocation generic Nominatim implementation after parity.
-
-Vocation remains authoritative for Work Location/Precision and all job-market semantics.
-
-## v0.3.0
-
-Focus: Routing. Released and accepted on 2026-08-17.
-
-v0.3.0 completes provider-neutral route planning/routing, not full live
-navigation. The four completed work packages are:
-
-1. **#10 — Define generic routing model and HTTP boundary**: two-point
-   `RouteRequest`, generic `TravelProfile`, `Route`, bounded decoded
-   `RouteGeometry`, `RoutingPort`, `RoutingService`, stable failures and
-   `POST /api/v1/routes`, proven with deterministic fake-port tests.
-2. **#11 — Integrate Valhalla routing provider**: Valhalla 3.8.3 behind the
-   infrastructure boundary, pinned reviewed runtime and retained Hamburg OSM
-   dataset, bounded provider responses/timeouts, provider-neutral failure
-   mapping, deterministic adapter tests and real-provider smoke for DRIVING,
-   CYCLING and WALKING.
-3. **#12 — Render generic routes on the Orientation map surface**: provider-
-   neutral route overlay lifecycle, route line/casing, origin/destination,
-   deterministic replace/clear behavior, lifecycle cleanup and ordinary plus
-   antimeridian-safe viewport fitting while preserving Spatial Scene and Current
-   Position overlays.
-4. **#13 — Integrate route planning into the Orientation Reference Host**:
-   explicit Start/Destination search and selection, explicit profile choice,
-   strict relative Orientation API calls, route summary/rendering, distinct
-   controlled failures, stale-request cancellation, route replacement/clear and
-   responsive desktop/mobile host usability.
-
-Dependency graph:
-
-```text
-#10
-├── #11
-└── #12
-     \
-      #11 + #12 -> #13
-```
-
-Acceptance is complete on integrated `dev` commit
-`7e6902bb8c1015aef506bd5a94ede702c705c198`: normal backend/map CI passes and
-the real Valhalla 3.8.3 + deterministic Photon + Orientation backend +
-production Reference Host + Chrome smoke passes. The real-provider smoke proves
-all three profiles and decoded endpoint geometry; the browser smoke proves
-explicit endpoint selection, visible route rendering, profile invalidation,
-route replacement/clear, preservation of Place/Reverse/Current Position
-behavior and desktop/mobile scrolling.
-
-Not included in v0.3.0: turn-by-turn guidance, live GPS rerouting, automatic
-PositionFix forwarding, persistence, OS/device permission ownership,
-foreign-domain semantics or a new Host Bridge version. `orientation.host-bridge`
-remains 1.0.
-
-## v0.4.0
-
-Focus: standalone spatial research/discovery and local persistence.
-
-The implemented work packages are:
-
-1. **#20 — Define Orientation spatial-research/import semantics**: versioned `orientation.spatial-research` 1.0 contract, criteria, provenance, evidence and strict heuristic/sensitive-trait boundaries.
-2. **#21 — Generate external-research prompts**: deterministic prompt generation from explicit user criteria with embedded contract/version guidance and no paid LLM/API execution.
-3. **#22 — Import and persist discovery data**: validate-before-mutation, explicit import translation, local SQLite persistence, deterministic re-import semantics and restart/reopen support.
-4. **#23 — Build the standalone discovery application**: question -> prompt -> import -> persisted collection -> map/evidence -> selected destination -> DRIVING/CYCLING/WALKING route, while Reference and Embed hosts remain separate.
-5. **#24 — Harden and release**: integrated regression, dependency-vulnerability gate, persistent restart/reopen browser smoke, WGT/Host Bridge compatibility audit and release-state consistency.
-
-Dependency order:
-
-```text
-#20
-  └── #21
-#20
-  └── #22
-#21 + #22
-  └── #23
-#20 + #21 + #22 + #23
-  └── #24
-```
-
-v0.4.0 does not include public transit, realtime transit, shared mobility,
-multimodal journey planning, turn-by-turn live GPS rerouting, automatic
-background research, paid LLM/API execution, a generic prompt/research service,
-Vocation migration completion or cross-device synchronization.
 
 ## Sequencing rule
 
-Do not create speculative contracts for later milestones in earlier milestones. Stabilize the smallest consumed boundary first and create future slices only when a concrete requirement exists.
+Stabilize the smallest consumed boundary first. Do not create future contracts or milestones merely because a provider exposes additional features. Shared mobility, richer disruption/realtime semantics, multimodal planning and consumer migrations require separately justified product slices after the v0.5.0 release is reviewed.

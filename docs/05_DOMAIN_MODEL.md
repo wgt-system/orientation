@@ -1,6 +1,6 @@
 # Orientation – Domain Model
 
-**Status:** v0.4.0 discovery model extends the released v0.1-v0.3 geospatial baseline; no Published Contract is frozen by this document.
+**Status:** v0.4.0 discovery model is released; v0.5.0 work introduces the accepted provider-neutral Journey boundary. No Published Contract is frozen by this document.
 
 ## Value objects
 
@@ -109,6 +109,34 @@ encoded provider polyline and provider identifiers are not domain requirements.
 
 The released v0.3.0 implementation provides the provider-neutral model plus Valhalla-backed DRIVING/CYCLING/WALKING route planning and rendering.
 
+### JourneyRequest / JourneyPlan / Journey / JourneyLeg
+
+Public transport is modeled separately from direct Route semantics because it is time-dependent and composed of ordered access, transit, transfer and egress legs.
+
+`JourneyRequest` contains:
+
+- origin Coordinate;
+- destination Coordinate;
+- explicit `DEPART_AT` or `ARRIVE_BY` intent;
+- offset-aware request time.
+
+`JourneyPlan` contains one to eight alternatives. Each `Journey` contains one to 64 ordered legs, at least one transit leg and a validated transfer count. Journey departure, arrival and duration are derived from its effective leg timings.
+
+`JourneyLeg` contains:
+
+- provider-neutral mode (`WALK` plus generic rail/suburban rail/subway/tram/bus/coach/ferry/other-transit modes);
+- origin and destination `JourneyStop`;
+- scheduled departure/arrival with optional realtime-adjusted values;
+- transit-service presentation for transit legs only;
+- optional immutable `JourneyLegGeometry` with at most 10,000 Coordinates;
+- at most 128 intermediate transit stops.
+
+Absence of realtime data is valid scheduled-only information. Provider-specific IDs, DTOs, error bodies and mode enums are not Journey domain semantics.
+
+The released `TravelProfile` remains DRIVING/CYCLING/WALKING only. Public transit is not introduced as a fourth Travel Profile.
+
+See [Public-Transit Journey Boundary](21_JOURNEY_BOUNDARY.md) and ADR-0008.
+
 ### SpatialResearchQuestion
 
 The v0.4 standalone discovery flow introduces an explicit spatial research question:
@@ -153,7 +181,7 @@ It is not authoritative for:
 - Vocation Work Location precision or job-market decisions;
 - another provider's business fields;
 - OS permission decisions;
-- external map/place datasets;
+- external map/place/transit datasets;
 - user learning/job state;
 - truth of an external researched claim merely because the claim was imported.
 
@@ -162,5 +190,7 @@ It is not authoritative for:
 The accepted v0.4 standalone discovery requirement justifies the first general Orientation database.
 
 Discovery Collections and their provenance are stored locally in SQLite behind `DiscoveryRepository`; see ADR-0007. The database stores Orientation-owned state only and must not become a copy of another bounded context's authoritative data.
+
+Journey results are ephemeral provider responses in the initial v0.5 boundary and are not persisted by Issue #40.
 
 Technical provider caches, if introduced later, remain separate in authority from imported research and durable personal discovery state.

@@ -4,9 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import system.wgt.orientation.application.journey.JourneyProviderException;
 import system.wgt.orientation.application.place.PlaceProviderException;
-import system.wgt.orientation.application.place.ProviderFailureKind;
-import system.wgt.orientation.application.routing.RoutingFailureKind;
 import system.wgt.orientation.application.routing.RoutingProviderException;
 
 @RestControllerAdvice
@@ -44,6 +43,22 @@ public class PlaceApiExceptionHandler {
                     .body(new ErrorResponse("routing.timeout", "The routing provider timed out."));
             case PROVIDER_UNAVAILABLE -> ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(new ErrorResponse("routing.provider-unavailable", "The routing provider is unavailable."));
+        };
+    }
+
+    @ExceptionHandler(JourneyProviderException.class)
+    ResponseEntity<ErrorResponse> journeyFailure(JourneyProviderException exception) {
+        return switch (exception.kind()) {
+            case NO_JOURNEY_FOUND -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("journey.no-journey", "No public-transit journey was found."));
+            case RATE_LIMITED -> ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(new ErrorResponse("journey.rate-limited", "The journey provider rate limit was reached."));
+            case INVALID_PROVIDER_RESPONSE -> ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(new ErrorResponse("journey.invalid-provider-response", "The journey provider returned an invalid response."));
+            case TIMEOUT -> ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ErrorResponse("journey.timeout", "The journey provider timed out."));
+            case PROVIDER_UNAVAILABLE -> ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ErrorResponse("journey.provider-unavailable", "The journey provider is unavailable."));
         };
     }
 

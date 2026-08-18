@@ -1,4 +1,4 @@
-# v0.4.0 release gate: persistent discovery is covered by the real Valhalla/Chrome smoke.
+# v0.5.0 release-candidate gate: both direct Route and public-transit Journey real-runtime smokes must pass.
 spring:
   application:
     name: orientation
@@ -25,3 +25,8 @@ orientation:
     connect-timeout: 2s
     read-timeout: 10s
     user-agent: wgt-system-orientation/0.3.0
+  motis:
+    base-url: ${ORIENTATION_MOTIS_BASE_URL:http://localhost:8081}
+    connect-timeout: 3s
+    read-timeout: 15s
+    user-agent: wgt-system-orientation/0.5.0 (+https://github.com/wgt-system/orientation)

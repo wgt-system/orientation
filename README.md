@@ -14,7 +14,7 @@ Current Location supports the same space: Orientation can consume and visualize 
 
 Orientation is independently useful; it is not only a map/geocoder/router for other bounded contexts.
 
-The v0.4 baseline provides this first-class standalone loop:
+The released v0.5.0 baseline provides this first-class standalone loop:
 
 ```text
 spatial question / criteria
@@ -33,10 +33,14 @@ reopen after restart
         ↓
 map/list exploration and evidence inspection
         ↓
-select destination
+select destination + explicit origin
         ↓
-DRIVING / CYCLING / WALKING route planning
+DRIVING / CYCLING / WALKING direct Route
+        or
+public-transit Journey alternatives with depart-at / arrive-by
 ```
+
+Public-transit planning is a separate time-dependent `Journey` model rather than another value in the direct-routing `TravelProfile`. The first adapter is MOTIS v2.11.0; deterministic acceptance uses a pinned self-hosted MOTIS runtime and pinned OSM/GTFS fixture. Public Transit is part of the **released v0.5.0 baseline**.
 
 Research results are evidence-backed input, not automatically authoritative truth. Heuristic matches must not silently become asserted sensitive personal characteristics.
 
@@ -55,7 +59,8 @@ Orientation owns:
 - map style/tile/provider integration;
 - place/POI discovery;
 - geocoding and reverse geocoding;
-- routing, route geometry, distance/duration and generic directions;
+- direct routing, route geometry, distance/duration and generic directions;
+- public-transit Journey semantics, Journey alternatives and Journey rendering;
 - generic current-position/accuracy representation;
 - mobility-provider adapters and generic mobility-planning semantics introduced by accepted slices;
 - provider adapters, caching, failure handling and technical geospatial policy.
@@ -90,7 +95,7 @@ orientation/
 └── scripts/
 ```
 
-Valhalla is an upstream C++ routing engine behind an Orientation adapter, not a WGT-owned codebase.
+Valhalla is the upstream engine for direct DRIVING/CYCLING/WALKING routes. MOTIS is the upstream engine behind the public-transit Journey adapter. Neither upstream engine is a WGT-owned codebase or part of Orientation domain semantics.
 
 ## Released foundation
 
@@ -100,7 +105,19 @@ Valhalla is an upstream C++ routing engine behind an Orientation adapter, not a 
 - **v0.2.0** — Orientation-owned Place model, forward place search and reverse geocoding through a replaceable Photon adapter and narrow HTTP endpoints.
 - **v0.3.0** — provider-neutral two-point routing, Valhalla 3.8.3 integration, DRIVING/CYCLING/WALKING, route rendering and Reference Host route planning.
 - **v0.4.0** — spatial-research contract 1.0, deterministic external-research prompts, strict import, local SQLite discovery persistence, restart/reopen support and the first standalone discovery-to-route application workflow.
+- **v0.5.0** — provider-neutral public-transit Journey planning, MOTIS v2.11.0 integration, Journey rendering and standalone Journey comparison/selection while preserving the v0.4 discovery and direct-routing baseline.
 
-v0.4.0 does **not** claim public transit, realtime transit, shared mobility, multimodal journey planning, turn-by-turn live navigation, automatic background crawling, paid LLM/API execution, Vocation migration completion or cross-device synchronization.
+## v0.5.0
+
+The released v0.5.0 baseline adds:
+
+- a provider-neutral, offset-aware public-transit `Journey` boundary with `DEPART_AT` / `ARRIVE_BY`;
+- ordered WALK/transit legs, scheduled timing plus optional realtime-adjusted timing, transfers and bounded decoded geometry;
+- MOTIS v2.11.0 behind the replaceable Journey provider boundary;
+- a dedicated Journey overlay on the reusable Map Surface, separate from direct Route state;
+- public-transit alternatives in the standalone app with explicit selection, replacement and clear behavior;
+- deterministic self-hosted MOTIS acceptance and real production-browser Journey acceptance while preserving the v0.4 discovery and direct-routing regression path.
+
+v0.5.0 does **not** claim shared mobility/GBFS, fares or ticketing, booking, complete realtime coverage, multimodal optimization across independent sharing providers, turn-by-turn live navigation, automatic background crawling, paid LLM/API execution, Vocation migration completion, cross-device synchronization or physical-iPhone support.
 
 See [`docs/16_PRODUCT_DIRECTION.md`](docs/16_PRODUCT_DIRECTION.md) for the product direction and [`docs/INDEX.md`](docs/INDEX.md) for the complete specification set.
