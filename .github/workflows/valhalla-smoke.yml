@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/valhalla-smoke.yml"
-      - ".github/scripts/photon-smoke-stub.py"
+      - ".github/scripts/motis-geocode-smoke-stub.py"
       - ".github/scripts/reference-route-browser-smoke.py"
       - ".github/scripts/standalone-discovery-browser-smoke.py"
       - ".github/scripts/screenshot-color-diagnostics.py"
@@ -16,6 +16,10 @@ on:
       - "backend/src/main/java/system/wgt/orientation/domain/discovery/**"
       - "backend/src/main/java/system/wgt/orientation/host/discovery/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/application/place/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/place/**"
+      - "backend/src/main/java/system/wgt/orientation/host/place/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
       - "backend/src/main/resources/**"
       - "contracts/examples/spatial-research-v1.valid.json"
       - "deployment/valhalla/**"
@@ -31,7 +35,7 @@ on:
     branches: [dev]
     paths:
       - ".github/workflows/valhalla-smoke.yml"
-      - ".github/scripts/photon-smoke-stub.py"
+      - ".github/scripts/motis-geocode-smoke-stub.py"
       - ".github/scripts/reference-route-browser-smoke.py"
       - ".github/scripts/standalone-discovery-browser-smoke.py"
       - ".github/scripts/screenshot-color-diagnostics.py"
@@ -43,6 +47,10 @@ on:
       - "backend/src/main/java/system/wgt/orientation/domain/discovery/**"
       - "backend/src/main/java/system/wgt/orientation/host/discovery/**"
       - "backend/src/main/java/system/wgt/orientation/infrastructure/discovery/**"
+      - "backend/src/main/java/system/wgt/orientation/application/place/**"
+      - "backend/src/main/java/system/wgt/orientation/domain/place/**"
+      - "backend/src/main/java/system/wgt/orientation/host/place/**"
+      - "backend/src/main/java/system/wgt/orientation/infrastructure/journey/**"
       - "backend/src/main/resources/**"
       - "contracts/examples/spatial-research-v1.valid.json"
       - "deployment/valhalla/**"
@@ -82,7 +90,7 @@ jobs:
       - name: Wait for Valhalla graph and service
         run: |
           for attempt in $(seq 1 120); do
-            if curl --fail --silent --show-error http://localhost:8002/status > /tmp/valhalla-status.json; then
+            if curl --fail --silent --show-error http://127.0.0.1:8002/status > /tmp/valhalla-status.json; then
               cat /tmp/valhalla-status.json
               exit 0
             fi
@@ -91,18 +99,18 @@ jobs:
           echo "Valhalla did not become ready within 10 minutes."
           exit 1
 
-      - name: Start deterministic Photon smoke stub
+      - name: Start deterministic local MOTIS geocode stub
         run: |
-          python3 .github/scripts/photon-smoke-stub.py > /tmp/photon-smoke.log 2>&1 &
-          echo $! > /tmp/photon-smoke.pid
+          python3 .github/scripts/motis-geocode-smoke-stub.py > /tmp/motis-geocode-smoke.log 2>&1 &
+          echo $! > /tmp/motis-geocode-smoke.pid
           for attempt in $(seq 1 20); do
-            if curl --fail --silent --show-error "http://127.0.0.1:8999/api?q=health&limit=1" > /tmp/photon-health.json; then
-              cat /tmp/photon-health.json
+            if curl --fail --silent --show-error http://127.0.0.1:8999/api/v1/health > /tmp/motis-geocode-health.json; then
+              cat /tmp/motis-geocode-health.json
               exit 0
             fi
             sleep 1
           done
-          echo "Photon smoke stub did not become ready."
+          echo "MOTIS geocode smoke stub did not become ready."
           exit 1
 
       - name: Start Orientation backend
@@ -110,14 +118,14 @@ jobs:
           rm -f /tmp/orientation-smoke.db /tmp/orientation-standalone-collection-id
           cd backend
           ORIENTATION_DATABASE_PATH=/tmp/orientation-smoke.db \
-          ORIENTATION_PHOTON_BASE_URL=http://127.0.0.1:8999 \
+          ORIENTATION_MOTIS_BASE_URL=http://127.0.0.1:8999 \
             ./mvnw --batch-mode spring-boot:run > /tmp/orientation.log 2>&1 &
           echo $! > /tmp/orientation.pid
 
       - name: Wait for Orientation health
         run: |
           for attempt in $(seq 1 60); do
-            if curl --fail --silent --show-error http://localhost:8080/actuator/health > /tmp/orientation-health.json; then
+            if curl --fail --silent --show-error http://127.0.0.1:8080/actuator/health > /tmp/orientation-health.json; then
               cat /tmp/orientation-health.json
               exit 0
             fi
@@ -132,7 +140,7 @@ jobs:
           import json
           import urllib.request
 
-          endpoint = "http://localhost:8080/api/v1/routes"
+          endpoint = "http://127.0.0.1:8080/api/v1/routes"
           origin = {"longitude": 10.0067, "latitude": 53.5526}
           destination = {"longitude": 9.9921, "latitude": 53.5504}
 
@@ -213,7 +221,7 @@ jobs:
           pkill -TERM -P "$parent" 2>/dev/null || true
           kill "$parent" 2>/dev/null || true
           for attempt in $(seq 1 30); do
-            if ! curl --silent --max-time 1 http://localhost:8080/actuator/health >/dev/null 2>&1; then
+            if ! curl --silent --max-time 1 http://127.0.0.1:8080/actuator/health >/dev/null 2>&1; then
               break
             fi
             if [ "$attempt" = "30" ]; then
@@ -224,11 +232,11 @@ jobs:
           done
           cd backend
           ORIENTATION_DATABASE_PATH=/tmp/orientation-smoke.db \
-          ORIENTATION_PHOTON_BASE_URL=http://127.0.0.1:8999 \
+          ORIENTATION_MOTIS_BASE_URL=http://127.0.0.1:8999 \
             ./mvnw --batch-mode spring-boot:run > /tmp/orientation-restart.log 2>&1 &
           echo $! > /tmp/orientation.pid
           for attempt in $(seq 1 60); do
-            if curl --fail --silent --show-error http://localhost:8080/actuator/health > /tmp/orientation-restart-health.json; then
+            if curl --fail --silent --show-error http://127.0.0.1:8080/actuator/health > /tmp/orientation-restart-health.json; then
               cat /tmp/orientation-restart-health.json
               exit 0
             fi
@@ -260,8 +268,8 @@ jobs:
           cat /tmp/orientation.log 2>/dev/null || true
           echo "=== Orientation restart ==="
           cat /tmp/orientation-restart.log 2>/dev/null || true
-          echo "=== Photon stub ==="
-          cat /tmp/photon-smoke.log 2>/dev/null || true
+          echo "=== MOTIS geocode stub ==="
+          cat /tmp/motis-geocode-smoke.log 2>/dev/null || true
           echo "=== Browser hosts ==="
           cat /tmp/reference-host.log 2>/dev/null || true
           echo "=== ChromeDriver ==="
@@ -272,7 +280,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          for pidfile in /tmp/chromedriver.pid /tmp/reference-host.pid /tmp/orientation.pid /tmp/photon-smoke.pid; do
+          for pidfile in /tmp/chromedriver.pid /tmp/reference-host.pid /tmp/orientation.pid /tmp/motis-geocode-smoke.pid; do
             if [ -f "$pidfile" ]; then
               parent="$(cat "$pidfile")"
               pkill -TERM -P "$parent" 2>/dev/null || true
