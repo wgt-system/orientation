@@ -124,10 +124,9 @@
             <div class="section-heading compact">
               <div>
                 <p class="kicker">Navigate</p>
-                <h2 id="route-title">Route to selected candidate</h2>
+                <h2 id="route-title">Plan a route or journey</h2>
               </div>
             </div>
-            <p id="selected-destination" class="selected-destination">Select a mapped candidate.</p>
             <label>
               Start
               <div class="inline-control">
@@ -137,6 +136,18 @@
             </label>
             <p id="route-origin-status" class="status">No start selected.</p>
             <ol id="route-origin-results" class="place-results"></ol>
+
+            <label>
+              Destination
+              <div class="inline-control">
+                <input id="route-destination-query" type="search" placeholder="Search destination or select a research candidate" />
+                <button id="route-destination-search" class="secondary" type="button">Find</button>
+              </div>
+            </label>
+            <p id="route-destination-status" class="status">No destination selected.</p>
+            <ol id="route-destination-results" class="place-results"></ol>
+            <p id="selected-destination" class="selected-destination">Search a destination or select a mapped research candidate.</p>
+
             <label>
               Travel mode
               <select id="route-profile">
