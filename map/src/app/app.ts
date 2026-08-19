@@ -1,6 +1,6 @@
 import "./styles.css";
 
-import { OrientationMapSurface } from "../lib/map-surface";
+import { LazyOrientationMapSurface } from "./lazy-map-surface";
 import type { SpatialFeature, SpatialFeatureSelectedEvent, SpatialScene } from "../lib/model";
 import type { TravelProfile } from "../lib/route-overlay";
 import { PlaceApiError, searchPlaces, type Place } from "../reference/place-api";
@@ -113,7 +113,7 @@ let destinationRequest = 0;
 let routeRequestSequence = 0;
 let journeyRequestSequence = 0;
 
-const surface = new OrientationMapSurface(mapContainer, {
+const surface = new LazyOrientationMapSurface(mapContainer, {
   onFeatureSelected: (event) => selectFromMap(event),
   onStatusChanged: ({ status }) => {
     mapStatus.hidden = status !== "error";
