@@ -1,0 +1,57 @@
+name: Patch issue 63 lazy standalone map
+
+on:
+  push:
+    branches: [issue/63-lazy-map-shell]
+    paths: [.github/workflows/issue-63-patch.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: issue/63-lazy-map-shell
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: map/package-lock.json
+      - shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('map/src/app/app.ts')
+          text = path.read_text(encoding='utf-8')
+          replacements = [
+              (
+                  'import { OrientationMapSurface } from "../lib/map-surface";',
+                  'import { LazyOrientationMapSurface } from "./lazy-map-surface";',
+              ),
+              (
+                  'const surface = new OrientationMapSurface(mapContainer, {',
+                  'const surface = new LazyOrientationMapSurface(mapContainer, {',
+              ),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one app.ts match, found {count}: {old!r}')
+              text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+      - working-directory: map
+        run: |
+          npm ci
+          npm run check
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/issue-63-patch.yml
+          git add map/src/app/app.ts
+          git commit -m "Lazy-load standalone Map Surface"
+          git push origin HEAD:issue/63-lazy-map-shell
