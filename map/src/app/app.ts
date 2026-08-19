@@ -64,6 +64,7 @@ const mapStatus = required<HTMLElement>("#app-map-status");
 const selectedDestination = required<HTMLElement>("#selected-destination");
 const routeOriginQuery = required<HTMLInputElement>("#route-origin-query");
 const routeOriginSearch = required<HTMLButtonElement>("#route-origin-search");
+const routeUseCurrentLocation = required<HTMLButtonElement>("#route-use-current-location");
 const routeOriginStatus = required<HTMLElement>("#route-origin-status");
 const routeOriginResults = required<HTMLOListElement>("#route-origin-results");
 const routeDestinationQuery = required<HTMLInputElement>("#route-destination-query");
@@ -88,9 +89,9 @@ const candidateSources = required<HTMLElement>("#candidate-sources");
 let collectionSummaries: readonly DiscoverySummary[] = [];
 let currentCollection: DiscoveryDetail | undefined;
 let selectedCandidate: DiscoveryCandidate | undefined;
-type NavigationDestination = Readonly<{ displayLabel: string; coordinate: Place["coordinate"] }>;
-let routeOrigin: Place | undefined;
-let routeDestination: NavigationDestination | undefined;
+type NavigationEndpoint = Readonly<{ displayLabel: string; coordinate: Place["coordinate"] }>;
+let routeOrigin: NavigationEndpoint | undefined;
+let routeDestination: NavigationEndpoint | undefined;
 let promptAbort: AbortController | undefined;
 let importAbort: AbortController | undefined;
 let collectionAbort: AbortController | undefined;
@@ -139,6 +140,7 @@ candidateFilter.addEventListener("input", renderCandidates);
 candidateSort.addEventListener("change", renderCandidates);
 showAllCandidates.addEventListener("click", () => renderCollectionScene());
 routeOriginSearch.addEventListener("click", () => void searchRouteOrigin());
+routeUseCurrentLocation.addEventListener("click", () => useCurrentLocation());
 routeOriginQuery.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -533,6 +535,59 @@ function renderCandidateDetail(candidate: DiscoveryCandidate): void {
   }
 }
 
+function useCurrentLocation(): void {
+  if (!navigator.geolocation) {
+    setStatus(routeOriginStatus, "Current location is unavailable in this browser context.", "error");
+    return;
+  }
+
+  routeUseCurrentLocation.disabled = true;
+  setStatus(routeOriginStatus, "Requesting current location…");
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      routeUseCurrentLocation.disabled = false;
+      const accuracy = position.coords.accuracy;
+      if (
+        !Number.isFinite(position.coords.longitude) ||
+        !Number.isFinite(position.coords.latitude) ||
+        !Number.isFinite(accuracy) ||
+        accuracy < 0
+      ) {
+        setStatus(routeOriginStatus, "The browser returned an invalid current location.", "error");
+        return;
+      }
+      const coordinate = { longitude: position.coords.longitude, latitude: position.coords.latitude };
+      routeOrigin = { displayLabel: "Current location", coordinate };
+      routeOriginQuery.value = "";
+      routeOriginResults.replaceChildren();
+      surface.setCurrentPosition({
+        coordinate,
+        accuracyMeters: accuracy,
+        observedAt: new Date(position.timestamp).toISOString(),
+      });
+      setStatus(routeOriginStatus, `Selected: Current location · ±${formatAccuracyMeters(accuracy)}`, "success");
+      invalidateNavigation("Start changed. Request navigation again.");
+      updateRouteControls();
+    },
+    (error) => {
+      routeUseCurrentLocation.disabled = false;
+      const message = error.code === 1
+        ? "Location permission was denied."
+        : error.code === 2
+          ? "Current location is unavailable."
+          : error.code === 3
+            ? "Current location request timed out."
+            : "Current location could not be read.";
+      setStatus(routeOriginStatus, message, "error");
+    },
+    { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+  );
+}
+
+function formatAccuracyMeters(accuracy: number): string {
+  return accuracy < 1000 ? `${Math.round(accuracy)} m` : `${(accuracy / 1000).toFixed(1)} km`;
+}
+
 async function searchRouteOrigin(): Promise<void> {
   const query = routeOriginQuery.value.trim();
   if (!query) return;
@@ -571,6 +626,7 @@ function renderOriginResults(places: readonly Place[]): void {
     button.append(title, meta);
     button.addEventListener("click", () => {
       routeOrigin = place;
+      surface.clearCurrentPosition();
       routeOriginResults.replaceChildren();
       setStatus(routeOriginStatus, `Selected: ${place.displayLabel}`, "success");
       invalidateNavigation("Start changed. Request navigation again.");
@@ -629,7 +685,7 @@ function renderDestinationResults(places: readonly Place[]): void {
   }
 }
 
-function setNavigationDestination(destination: NavigationDestination, status: string): void {
+function setNavigationDestination(destination: NavigationEndpoint, status: string): void {
   routeDestination = destination;
   routeDestinationResults.replaceChildren();
   setStatus(routeDestinationStatus, status, "success");

@@ -10,14 +10,16 @@ Research is optional for navigation.
 
 A user can open Orientation and immediately:
 
-1. search a Start through the local MOTIS-backed Place boundary;
-2. search a Destination through the same local boundary;
+1. choose `Use my location` or search a Start through the local MOTIS-backed Place boundary;
+2. search a Destination through the same local Place boundary, or select a mapped Discovery Candidate;
 3. choose Driving, Cycling, Walking or Public transit;
 4. request a Route or Journey.
 
-No Spatial Research Bundle, Discovery Collection or imported candidate is required for this ad-hoc flow.
+No Spatial Research Bundle, Discovery Collection or imported candidate is required for the ad-hoc flow.
 
-A mapped Discovery Candidate remains another valid destination source. Selecting one replaces the current navigation destination with that candidate coordinate while keeping its evidence available.
+`Use my location` is an explicit one-shot browser action. Orientation does not request location permission on page load, does not reverse-geocode the fix, does not call an external geolocation API, and does not persist or continuously watch position history. The existing Map Surface current-position layer renders the returned coordinate and browser-reported accuracy.
+
+Manual Start search replaces the current-location origin. A mapped Discovery Candidate remains another valid destination source and replaces the current navigation destination while keeping its evidence available.
 
 ## Reachability and layout
 
@@ -63,6 +65,7 @@ Direct Route and public-transit Journey are separate application states.
 - stale in-flight requests are aborted and sequence-guarded;
 - clearing navigation removes Route/Journey presentation but retains the chosen Start and Destination for another request;
 - Discovery state is independent of the ad-hoc endpoint state;
+- switching from current location to a searched Start clears the current-position presentation;
 - switching back to direct routing removes Journey alternatives/time controls.
 
 The Map Surface itself remains capable of holding Route and Journey independently; the standalone product owns the mutually exclusive presentation policy.
@@ -70,6 +73,8 @@ The Map Surface itself remains capable of holding Route and Journey independentl
 ## Failure states
 
 Stable product messages cover invalid request, no Journey found, provider rate limiting, invalid provider response, timeout and unavailability. Provider-specific error bodies are not exposed.
+
+Browser current-location failures are local UI states: permission denied, unavailable, timeout or invalid fix. They do not trigger a hosted fallback.
 
 If local MOTIS is unavailable, Orientation fails visibly; it does not silently forward Place/Journey requests to Transitous, Photon or another hosted provider.
 
@@ -79,19 +84,22 @@ The production-browser MOTIS smoke uses pinned self-hosted MOTIS v2.11.0/Aachen 
 
 1. verifies desktop/mobile workspace reachability;
 2. starts with no imported Discovery Candidate;
-3. searches and selects an origin through real local MOTIS geocoding;
-4. searches and selects a destination through real local MOTIS geocoding;
-5. chooses Public transit and the pinned fixture time;
-6. obtains real Journey alternatives through Orientation and self-hosted MOTIS;
-7. renders a selected Journey;
-8. verifies mode switching and explicit clear while retaining the selected endpoints.
+3. injects a deterministic browser geolocation fix and selects it through the real `Use my location` control;
+4. verifies the selected Start exposes browser-reported accuracy;
+5. searches and selects a destination through real local MOTIS geocoding;
+6. chooses Public transit and the pinned fixture time;
+7. obtains real Journey alternatives through Orientation and self-hosted MOTIS;
+8. renders a selected Journey;
+9. verifies mode switching and explicit clear while retaining the selected endpoints.
 
 The existing Valhalla/v0.4 regression separately continues to prove Discovery import/restart/reopen and candidate-to-direct-Route behavior.
 
-No public Transitous or Photon request is required.
+No public Transitous, Photon or external geolocation request is required.
 
 ## Non-goals
 
+- continuous position watching/tracking;
+- location history;
 - arbitrary waypoints;
 - saved/favorite routes or Journey history;
 - shared mobility/GBFS;
