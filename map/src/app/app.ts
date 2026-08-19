@@ -541,10 +541,15 @@ function useCurrentLocation(): void {
     return;
   }
 
+  originAbort?.abort();
+  originAbort = undefined;
+  const sequence = ++originRequest;
+  routeOriginResults.replaceChildren();
   routeUseCurrentLocation.disabled = true;
   setStatus(routeOriginStatus, "Requesting current location…");
   navigator.geolocation.getCurrentPosition(
     (position) => {
+      if (sequence !== originRequest) return;
       routeUseCurrentLocation.disabled = false;
       const accuracy = position.coords.accuracy;
       if (
@@ -570,6 +575,7 @@ function useCurrentLocation(): void {
       updateRouteControls();
     },
     (error) => {
+      if (sequence !== originRequest) return;
       routeUseCurrentLocation.disabled = false;
       const message = error.code === 1
         ? "Location permission was denied."
@@ -591,6 +597,7 @@ function formatAccuracyMeters(accuracy: number): string {
 async function searchRouteOrigin(): Promise<void> {
   const query = routeOriginQuery.value.trim();
   if (!query) return;
+  routeUseCurrentLocation.disabled = false;
   originAbort?.abort();
   const controller = new AbortController();
   originAbort = controller;

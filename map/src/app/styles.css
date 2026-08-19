@@ -112,11 +112,13 @@ button.secondary.selected { border-color: #6bb9b1; background: #15252a; }
   .app-header-main { width: 100%; }
   .app-jump-nav { position: sticky; top: 0; z-index: 5; padding: 6px 0; background: rgba(12, 17, 23, 0.94); backdrop-filter: blur(8px); }
   .app-jump-nav a { flex: 1 1 0; min-width: 90px; text-align: center; padding: 9px 10px; }
+  .app-jump-nav a[href="#navigate-card"] { order: -1; }
   .workspace { display: flex; flex-direction: column; min-height: auto; overflow: visible; }
   .workspace-column { max-height: none; overflow: visible; scrollbar-gutter: auto; overscroll-behavior: auto; }
   .research-panel, .collection-panel, .map-panel { width: 100%; padding-right: 0; }
-  .map-panel { order: 2; }
-  .collection-panel { order: 1; }
+  .map-panel { order: -1; }
+  .research-panel { order: 1; }
+  .collection-panel { order: 2; }
   .app-map { height: 44vh; min-height: 300px; }
   .form-grid, .candidate-tools { grid-template-columns: 1fr; }
   .criterion-row { grid-template-columns: 1fr 120px 34px; }
