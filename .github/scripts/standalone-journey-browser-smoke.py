@@ -133,11 +133,17 @@ def verify_workspace_layout(session: str) -> None:
         "mobile document-scroll layout",
         """
         const research=document.querySelector('#research-panel');
-        if(!research) return null;
+        const collections=document.querySelector('#collections-panel');
+        const navigate=document.querySelector('#navigate-card');
+        const nav=document.querySelector('.app-jump-nav');
+        if(!research || !collections || !navigate || !nav) return null;
         const bodyOverflow=getComputedStyle(document.body).overflowY;
         const researchOverflow=getComputedStyle(research).overflowY;
-        return (document.documentElement.scrollHeight > window.innerHeight && researchOverflow !== 'auto')
-          ? {bodyOverflow, researchOverflow, scrollHeight:document.documentElement.scrollHeight}
+        const navigateTop=navigate.getBoundingClientRect().top;
+        const navigationFirst=navigateTop < research.getBoundingClientRect().top && navigateTop < collections.getBoundingClientRect().top;
+        const firstJump=nav.querySelector('a')?.getAttribute('href');
+        return (document.documentElement.scrollHeight > window.innerHeight && researchOverflow !== 'auto' && navigationFirst && firstJump === '#navigate-card')
+          ? {bodyOverflow, researchOverflow, scrollHeight:document.documentElement.scrollHeight, navigationFirst, firstJump}
           : null;
         """,
         timeout=10,
