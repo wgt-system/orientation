@@ -136,14 +136,18 @@ def verify_workspace_layout(session: str) -> None:
         const collections=document.querySelector('#collections-panel');
         const navigate=document.querySelector('#navigate-card');
         const nav=document.querySelector('.app-jump-nav');
-        if(!research || !collections || !navigate || !nav) return null;
+        const researchJump=nav?.querySelector('a[href="#research-panel"]');
+        const collectionsJump=nav?.querySelector('a[href="#collections-panel"]');
+        const navigateJump=nav?.querySelector('a[href="#navigate-card"]');
+        if(!research || !collections || !navigate || !nav || !researchJump || !collectionsJump || !navigateJump) return null;
         const bodyOverflow=getComputedStyle(document.body).overflowY;
         const researchOverflow=getComputedStyle(research).overflowY;
         const navigateTop=navigate.getBoundingClientRect().top;
         const navigationFirst=navigateTop < research.getBoundingClientRect().top && navigateTop < collections.getBoundingClientRect().top;
-        const firstJump=nav.querySelector('a')?.getAttribute('href');
-        return (document.documentElement.scrollHeight > window.innerHeight && researchOverflow !== 'auto' && navigationFirst && firstJump === '#navigate-card')
-          ? {bodyOverflow, researchOverflow, scrollHeight:document.documentElement.scrollHeight, navigationFirst, firstJump}
+        const navigateJumpOrder=Number(getComputedStyle(navigateJump).order);
+        const jumpFirst=navigateJumpOrder < Number(getComputedStyle(researchJump).order) && navigateJumpOrder < Number(getComputedStyle(collectionsJump).order);
+        return (document.documentElement.scrollHeight > window.innerHeight && researchOverflow !== 'auto' && navigationFirst && jumpFirst)
+          ? {bodyOverflow, researchOverflow, scrollHeight:document.documentElement.scrollHeight, navigationFirst, navigateJumpOrder}
           : null;
         """,
         timeout=10,
