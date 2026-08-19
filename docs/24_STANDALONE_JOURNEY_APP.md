@@ -28,8 +28,21 @@ Navigate is a first-class workspace area, not a control hidden below the map.
 - the header provides direct Research / Collections / Navigate jumps;
 - on wide desktop layouts, the long workspace columns scroll independently inside the viewport;
 - Navigate is placed before the map in the navigation/map column;
-- on narrow/mobile layouts the app returns to normal document scrolling and keeps the section jumps touch-reachable;
+- on narrow/mobile layouts, Navigate + map are presented before Research and Collections, while all three sections remain directly reachable through the sticky jump navigation;
 - responsive browser support does not imply that a full local MOTIS/Valhalla dataset is installed on the phone.
+
+## Client loading
+
+The standalone navigation shell does not synchronously load the reusable Map Surface.
+
+- the form, Start/Destination search, current-location action and other application controls initialize first;
+- after the first browser paint, a standalone loading boundary dynamically imports MapLibre, its worker/CSS and the existing Map Surface;
+- only then does the Map Surface request the hosted OpenFreeMap style/vector resources needed for the visible map;
+- the loading boundary retains the latest Scene, Route, Journey and current-position presentation state while the map module is pending and replays it when the real surface is available;
+- map loading failure is a visible map failure and does not disable the local Place/Route/Journey application APIs;
+- Reference Host and Embed Host keep their existing eager Map Surface behavior because this optimization is specific to the end-user standalone startup path.
+
+This is a first-load optimization, not an offline-map guarantee. Browser HTTP caching may make repeated asset/tile loads cheaper, but new/evicted map resources still require network access to OpenFreeMap.
 
 ## Public-transit controls
 
@@ -107,4 +120,5 @@ No public Transitous, Photon or external geolocation request is required.
 - turn-by-turn live navigation;
 - automatic provider selection/fallback;
 - phone-local large-dataset packaging;
+- offline/PWA map packaging;
 - a new `orientation.host-bridge` version.
